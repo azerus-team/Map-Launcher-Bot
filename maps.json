@@ -1,0 +1,61 @@
+[
+  {
+    "__comment": "You can list here your maps to start. Accept only direct link!",
+    "title": "Puzzle Wars",
+    "alias": "pw",
+    "url": "https://azerusteam.com/download/puzzle-wars.zip",
+    "version": "1.17.1",
+    "emojiId": "529361621022277635",
+    "discordEmoji" : "<pw:529361621022277635>"
+  },
+  {
+    "title": "Maze Wars",
+    "alias": "mw",
+    "url": "https://azerusteam.com/download/maze-wars.zip",
+    "version": "1.17.1",
+    "emojiId": "595267046049185822",
+    "discordEmoji" : "<mw:595267046049185822>"
+  },
+  {
+    "title": "Math Fractals",
+    "alias": "mf",
+    "url": "https://azerusteam.com/download/math-fractals.zip",
+    "version": "1.17.1",
+    "emojiId": "818159235245277194",
+    "discordEmoji": "<:mf:818159235245277194>"
+  },
+  {
+    "title": "Block Combat",
+    "alias": "bc",
+    "url": "https://azerusteam.com/download/block-combat.zip",
+    "version": "1.17.1",
+    "emojiId": "818159524468883466",
+    "discordEmoji": "<:bc:818159524468883466>"
+  },
+  {
+    "title": "Wings Wars",
+    "alias": "ww",
+    "url": "https://azerusteam.com/download/wings-wars.zip",
+    "version": "1.17.1",
+    "emojiId": "818159624267104266",
+    "discordEmoji": "<:ww:818159624267104266>"
+  },
+  {
+    "title": "Dodgearrow",
+    "alias": "da",
+    "emojiId": "841655094331703376",
+    "url": "https://azerusteam.com/download/dodgearrow.zip",
+    "version": "1.17.1",
+    "resourcePack": "https://azerusteam.com/resources/dodgearrow_resources.zip",
+    "discordEmoji": "<:da:841655094331703376>"
+  },
+  {
+    "title": "Feed the Ravager",
+    "alias": "fr",
+    "emojiId": "905308184711929857",
+    "url": "https://azerusteam.com/download/feed-the-ravager.zip",
+    "version": "1.17.1",
+    "resourcePack": "https://azerusteam.com/resources/feed-the-ravager_resources.zip",
+    "discordEmoji": "<:ftr:905308184711929857>"
+  }
+]
