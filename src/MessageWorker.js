@@ -65,17 +65,12 @@ class MessageWorker {
             this.mainMessage = await this.channel.messages.fetch(msID["MAIN"].toString());
             this.logMessage = await this.channel.messages.fetch(msID["LOG"].toString());
         } catch (e) {
+            console.log("Unable to find messages in channel!");
         }
-        if (this.mainMessage == null) {
-            this.mainMessage = await this.channel.send(this.buildMainMessage());
-        }
-
-        if (this.logMessage == null) {
-            this.logMessage = await this.channel.send("> Bot is started...");
-        }
-
-        await this.mainMessage.edit(this.buildMainMessage());
-        await this.mainMessage.reactions.removeAll();
+        this.mainMessage = this.mainMessage ?? await this.channel.send(this.buildMainMessage());
+        this.logMessage = this.logMessage ?? await this.channel.send("> Bot is started...");
+        await this.sendMainMessage();
+        await this.sendLogMessage("Bot is started!");
         fs.writeFileSync("./messages.json", JSON.stringify({"MAIN": this.mainMessage.id, "LOG": this.logMessage.id}));
     }
 
@@ -125,15 +120,15 @@ class MessageWorker {
             .setColor(config.sideColor)
             .setFooter(config.footerMessage)
 
-            .addField("Status", this.resolveStatus(), true)
+            .addField("Status", MessageWorker.resolveStatus(this.serverManager.state), true)
             .addField("Initiator", initiator ? `<@!${initiator.id}>` : "N/A", true)
             .addField("IP", "`" + config.publicIP + "`", true)
             .addField("Message", content, true)
         return {content: " ", embeds: [embed], components: [row]};
     }
 
-    resolveStatus() {
-        switch (this.serverManager.state) {
+    static resolveStatus(state) {
+        switch (state) {
             case "WAITING":
                 return "🟣 Waiting";
             case "V_SELECTION":

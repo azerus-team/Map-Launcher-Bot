@@ -209,7 +209,7 @@ class ServerManager {
         this.version = version;
         let versionData = this.vManager.selectVersion(version);
         if (versionData == null) {
-            await this.messageWorker.sendLogMessage("> Version does not exist!");
+            await this.messageWorker.sendLogMessage(`Version "${version}" does not exist or invalid version id!`);
             return;
         }
         console.log(`Download JAR file for ${this.vManager.selectedVersion["type"]} ${this.version}`);
@@ -280,12 +280,13 @@ class ServerManager {
                     let version = parsed?.value?.["Data"]?.value["Version"]?.value["Name"]?.value;
                     this.isCustomMap = true;
                     this.initiator = message.author;
-                    if (version) {
-                        await this.messageWorker.sendLogMessage(`Version ${version} auto detected from level.dat file!`);
+                    if (version === this.getVersionManager().getLatestRelease() ||
+                        version === this.getVersionManager().getLatestSnapshot()) {
+                        await this.messageWorker.sendLogMessage(`Latest version ${version} auto detected from level.dat file!`);
                         await this.selectVersion(version);
                     } else {
                         this.state = "V_SELECTION";
-                        await this.messageWorker.sendMainMessage("Select one of version below OR write special version");
+                        await this.messageWorker.sendMainMessage(`Map is loaded in ${version} which is not latest or unusual. Select version or write that you need!`);
                     }
                 } else {
                     try {
@@ -442,7 +443,7 @@ class ServerManager {
             await zip("./server/world/", "./world.zip");
             this.initiator = null;
             if (config.generateDownloadLink) {
-                await spawn('curl', ["--upload-file", "./world.zip", "http://transfer.sh/world.zip"], {cwd: "./"}).stdout.on("data", chunk => {
+                await spawn('curl', ["--upload-file", "./world.zip", "https://transfer.sh/world.zip"], {cwd: "./"}).stdout.on("data", chunk => {
                     this.messageWorker.sendLogMessage("Server is closed!");
                     this.state = ServerManager.States.WAITING;
                     this.messageWorker.sendMainMessage("[Download link](" + chunk.toString() + ")");

@@ -2,7 +2,7 @@ const https = require("https");
 const {MessageSelectMenu} = require("discord.js");
 
 class VersionManager {
-    static VERSION_MANIFEST = "https://launchermeta.mojang.com/mc/game/version_manifest.json";
+    static VERSION_MANIFEST = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json";
     /**
      *
      * @type {String}
@@ -90,7 +90,12 @@ class VersionManager {
             .catch(e => console.error("Version Manifest is not updated!"));
         return mainReleases;
     }
-
+    getLatestRelease() {
+        return this?.jsonManifest?.["latest"]?.["release"];
+    }
+    getLatestSnapshot() {
+        return this?.jsonManifest?.["latest"]?.["snapshot"];
+    }
     /**
      * @private
      * @param {String}versionUrl
