@@ -9,6 +9,11 @@ const { spawn, spawnSync } = require("child_process");
 const unzipper = require("unzipper");
 const githubManager = require("./GitHubReleaseDownloader");
 const MessageWorker = require("./MessageWorker");
+const VanillaCore = require("./cores/VanillaCore");
+const PaperCore = require("./cores/PaperCore");
+const FabricCore = require("./cores/FabricCore");
+
+
 const config = require("./../Config");
 const fs = require("fs");
 const {TextChannel, Snowflake, SelectMenuInteraction, ButtonInteraction} = require("discord.js");
@@ -49,7 +54,7 @@ class ServerManager {
     /**
      * @type {VersionManager}
      */
-    vManager;
+    vManager = new VersionManager(this);
     /**
      * @type {Discord.Message}
      */
@@ -68,18 +73,32 @@ class ServerManager {
      */
     messageWorker;
     /**
+     * @type {Core}
+     */
+    core;
+    /**
      *
      * @param {Discord.Client} client
      * @param {VersionManager} vManager
      */
-    constructor(client,vManager) {
-        this.vManager = vManager;
+    constructor(client) {
         this.messageWorker = new MessageWorker(client, this.mapManager, this);
         if (!fs.existsSync("./jars")) {
             fs.mkdirSync("./jars");
         }
         if (!fs.existsSync("./server")) {
             fs.mkdirSync("./server");
+        }
+        switch (config.core) {
+            case "PAPER":
+                this.core = new PaperCore(this);
+                break;
+            case "FABRIC":
+                this.core = new FabricCore(this);
+                break;
+            default:
+                this.core = new VanillaCore(this);
+                break;
         }
     }
     async stopServer() {
@@ -92,19 +111,19 @@ class ServerManager {
         await this.messageWorker.sendMainMessage();
     }
     async onTick() {
-        if ( (this.state === "HOSTING" && this.players.length === 0)) {
+        if (this.state === "HOSTING" && this.players.length === 0) {
             this.idleTime++;
-            if (this.idleTime > 20 * 60 * 10) {
+            if (this.idleTime > 20 * 60 * 10) { //10 minutes
                 this.serverProcess.kill("SIGKILL");
             }
         } else if (this.state === "V_SELECTION") {
             this.idleTime++;
-            if (this.idleTime > 20 * 60 * 3) {
+            if (this.idleTime > 20 * 60 * 3) { // 3 minutes
                 await this.stopServer();
             }
         } else if (this.state === "RP_SELECTION") {
             this.idleTime++;
-            if (this.idleTime > 20 * 60 * 3) {
+            if (this.idleTime > 20 * 60 * 3) { // 3 minutes
                 await this.stopServer()
             }
         } else {
@@ -112,30 +131,7 @@ class ServerManager {
         }
     }
     async downloadJarIfNotExist() {
-        return new Promise(async (resolve, reject) => {
-
-            if (fs.existsSync("./jars/Minecraft-" + this.vManager.selectedVersion["id"] + ".jar")) {
-                resolve(false);
-                return;
-            }
-            await this.messageWorker.sendLogMessage(`Downloading ${this.vManager.selectedVersion["type"]} ${this.vManager.selectedVersion["id"]}`);
-            let downloadingLink = await this.vManager.getDownloadingLink();
-            if (downloadingLink == null) {
-                reject("Link is empty");
-                return;
-            }
-            https.get(downloadingLink, res => {
-                let writeStream = fs.createWriteStream("./jars/Minecraft-" + this.vManager.selectedVersion["id"] + ".jar");
-                res.pipe(writeStream);
-                res.on("close", () => {
-                    resolve(true);
-                })
-                res.on("error", (err) => {
-                    console.error(err);
-                    reject(err);
-                })
-            });
-        });
+        await this.core.install();
     }
     setResourcePack(link) {
         this.resourcePackLink = link;
@@ -145,7 +141,7 @@ class ServerManager {
             server-port=${config.serverPort}
             spawn-protection=0
             gamemode=survival
-            resource-pack=${this.resourcePackLink==null?"":this.resourcePackLink}
+            resource-pack=${this.resourcePackLink ?? ""}
             enable-command-block=true
             max-players=${config.maxPlayers}
             online-mode=${config.onlineMode}
@@ -207,12 +203,13 @@ class ServerManager {
     }
     async selectVersion(version) {
         this.version = version;
+        this.state = ServerManager.States.DOWNLOADING_VERSION;
         let versionData = this.vManager.selectVersion(version);
         if (versionData == null) {
             await this.messageWorker.sendLogMessage(`Version "${version}" does not exist or invalid version id!`);
             return;
         }
-        console.log(`Download JAR file for ${this.vManager.selectedVersion["type"]} ${this.version}`);
+        //console.log(`Download JAR file for ${this.vManager.selectedVersion["type"]} ${this.version}`);
         if (this.isCustomMap) {
             await this.messageWorker.sendMainMessage("Select one of version below OR write special version");
         }
@@ -220,6 +217,8 @@ class ServerManager {
         this.state = "RP_SELECTION";
         if (isDownloaded) {
             await this.messageWorker.sendLogMessage("Server is downloaded!");
+        } else {
+            await this.messageWorker.sendLogMessage("Server already downloaded!");
         }
         if (!this.isCustomMap) {
             let resourcePack = this.mapManager.selectedMap.resourcePack;
@@ -243,11 +242,12 @@ class ServerManager {
         switch (this.state) {
             case "WAITING":
                 let url = "";
+                this.state = ServerManager.States.DOWNLOADING_WORLD;
                 if (message.attachments == null || message.attachments.size !== 1) {
                     let writeUrl = message.content;
                     url = new URL(writeUrl);
 
-                    let matchUrl = writeUrl.match(/^https:\/\/.*\.zip.*$/);
+                    let matchUrl = writeUrl.match(/^https:\/\/.*$/);
                     if (!matchUrl) {
                         await this.messageWorker.sendLogMessage("Send your zip map file, or link for downloading map using https protocol!")
                         return;
@@ -272,12 +272,13 @@ class ServerManager {
                         return;
                     }
                     let data;
+                    let version = null;
                     try {
                         data = fs.readFileSync("./server/world/level.dat");
+                        const { parsed } = await parse(data)
+                        version = parsed?.value?.["Data"]?.value["Version"]?.value["Name"]?.value;
                     } catch (e) {
                     }
-                    const { parsed } = await parse(data)
-                    let version = parsed?.value?.["Data"]?.value["Version"]?.value["Name"]?.value;
                     this.isCustomMap = true;
                     this.initiator = message.author;
                     if (version === this.getVersionManager().getLatestRelease() ||
@@ -332,6 +333,7 @@ class ServerManager {
                 try {
                     await interaction.update({fetchReply: false})
                 } catch (e) {}
+                this.state = ServerManager.States.DOWNLOADING_WORLD;
                 await this.messageWorker.sendMainMessage("Preparing map...");
                 let mapFromEmoji = this.mapManager.getMapFromAlias(alias);
                 if (mapFromEmoji == null) {
@@ -360,24 +362,24 @@ class ServerManager {
             case "V_SELECTION":
                 if (!(interaction instanceof SelectMenuInteraction)) return;
                 if (interaction.member.user !== this.initiator) return;
-                interaction.update({fetchReply: false});
+                interaction.update({fetchReply: true});
                 await this.selectVersion(interaction.values[0])
                 break;
             case "RP_SELECTION":
                 if (!(interaction instanceof ButtonInteraction)) return;
                 if (interaction.member.user !== this.initiator) return;
                 if (interaction.customId === "no_rp") {
+                    interaction.update({fetchReply: true});
                     this.setResourcePack(null);
                     await this.startServer();
-                    interaction.update({fetchReply: false});
                 }
                 break;
             case "STARTING":
                 if (!(interaction instanceof ButtonInteraction)) return;
                 if (interaction.member.user !== this.initiator) return;
                 if (interaction.customId === "stop_server") {
-                    this.serverProcess.kill("SIGKILL");
                     interaction.update({fetchReply: false});
+                    this.serverProcess.kill("SIGKILL");
                 }
                 break;
             case "HOSTING":
@@ -402,12 +404,14 @@ class ServerManager {
         for (let i = 0; i < line.length; i++) {
             let oneLine = line[i];
             let started = oneLine.match(/\[\d\d:\d\d:\d\d] \[.*\/.*]: Done \((.*)\)! For help, type "help"/);
+            started = started ?? oneLine.match(/\[\d\d:\d\d:\d\d INFO]: Done \((.*)\)! For help, type "help"/);
             if (started) {
                 this.state = "HOSTING";
                 await this.messageWorker.sendLogMessage(`Server is started in ${started[1]}`);
                 await this.messageWorker.sendMainMessage("To close server click 🛑");
             }
             let joined = oneLine.match(/\[\d\d:\d\d:\d\d] \[.*\/.*]: ([a-zA-Z_0-9]*)\[\/.*] logged in with entity id \d* at \(.*,.*,.*\)/);
+            joined = joined ?? oneLine.match(/\[\d\d:\d\d:\d\d INFO]: ([a-zA-Z_0-9]*)\[\/.*] logged in with entity id \d* at \(.*,.*,.*\)/);
             if (joined) {
                 let username = joined[1];
                 this.players.push(username);
@@ -415,6 +419,7 @@ class ServerManager {
                 await this.messageWorker.sendLogMessage(`${username} joined the game!`);
             }
             let left = oneLine.match(/\[\d\d:\d\d:\d\d] \[.*\/.*]: ([a-zA-Z_0-9]*) lost connection: .*/);
+            left = left ?? oneLine.match(/\[\d\d:\d\d:\d\d INFO]: ([a-zA-Z_0-9]*) lost connection: .*/);
             if (left) {
                 let username = left[1];
                 this.players.splice(this.players.indexOf(username), 1);
@@ -425,10 +430,11 @@ class ServerManager {
     }
     async startServer() {
         this.state = "STARTING";
-        await this.messageWorker.sendLogMessage("Starting server...");
         await this.messageWorker.sendMainMessage();
+        await this.messageWorker.sendLogMessage("Starting server...");
+
         this.createServerProperties();
-        this.serverProcess = spawn('java',['-jar', '-Xmx'+config.maxMemory, '-Xms'+config.initialMemory, '../jars/' + "Minecraft-" + this.version+".jar", 'nogui'], {cwd: "./server/"});
+        this.serverProcess = await this.core.createServerProcess();
         this.serverProcess.stdout.on("data", chunk => {
             this.onConsoleMessage(chunk);
         });
@@ -439,7 +445,7 @@ class ServerManager {
         this.serverProcess.on("error", console.error);
         this.serverProcess.on("exit",async (code, signal) => {
             //PROCESS CRASHED OR STOPPED;
-            console.log("Server is stopped! " + signal + " ("+ code + ")");
+            console.log("Server is stopped! " + signal + " (" + code + ")");
             await zip("./server/world/", "./world.zip");
             this.initiator = null;
             if (config.generateDownloadLink) {
@@ -459,7 +465,9 @@ class ServerManager {
     }
     static States = {
         "WAITING": "WAITING",
+        "DOWNLOADING_WORLD":"W_DOWNLOADING",
         "VERSION_SELECTION": "V_SELECTION",
+        "DOWNLOADING_VERSION": "V_DOWNLOADING",
         "RP_SELECTION": "RP_SELECTION",
         "STARTING": "STARTING",
         "HOSTING": "HOSTING"

@@ -1,13 +1,16 @@
-exports.channelId = "759092648178221077";
+exports.channelId = "573137370044694539";
 
 //You can use DISCORD_TOKEN env variable!
 exports.botToken = process.env.DISCORD_TOKEN || "YOUR_TOKEN_HERE";
+
+//Avaliable platforms: VANILLA, (FABRIC, PAPER coming soon)
+exports.core = "VANILLA"
 exports.serverPort = 25565;
 exports.initialMemory = "1G";
 exports.maxMemory = "4G";
 exports.onlineMode = true;
 exports.maxPlayers = 50;
-// Upload map to transfer.sh site and gives link.
+//  Upload map to transfer.sh and gives link after closing server.
 exports.generateDownloadLink = true;
 // Minecraft End User License Agreement available at https://account.mojang.com/documents/minecraft_eula.
 exports.eula = false;

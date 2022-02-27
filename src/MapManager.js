@@ -24,11 +24,12 @@ class MapManager {
         for (let map of maps) {
             this.maps.push(new Map(map));
         }
+        this.maps.reverse();
     }
 
     /**
      *
-     * @param {GuildEmoji | ReactionEmoji} emoji
+     * @param {Discord.GuildEmoji | Discord.ReactionEmoji} emoji
      * @returns {Map|null}
      */
     getMapFromEmoji(emoji) {
@@ -62,7 +63,7 @@ class MapManager {
             .setMinValues(1)
             .setCustomId("map_select")
             .setPlaceholder("Select map")
-            .addOptions(this.maps.reverse().map(value => {
+            .addOptions(this.maps.map(value => {
                    return {
                        "label": value.title,
                        "value": value.alias,

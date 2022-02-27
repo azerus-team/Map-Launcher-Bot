@@ -2,19 +2,17 @@ const Config = require("./Config");
 const Discord = require('discord.js');
 const client = new Discord.Client({intents: ["GUILDS", "GUILD_MESSAGE_REACTIONS", "GUILD_MESSAGES"]});
 const ServerManager = require("./src/ServerManager");
-const VersionManager = require("./src/VersionManager");
 const {MessageComponentInteraction} = require("discord.js");
-const vManager = new VersionManager();
 let sManager;
 
 
 client.on("ready", () => {
     console.log("Map Testing bot is started");
-    sManager = new ServerManager(client, vManager);
+    sManager = new ServerManager(client);
     setInterval(() => {
         // noinspection JSIgnoredPromiseFromCall
         sManager.onTick();
-    }, 1000/20);
+    }, 1000 / 20);
 });
 client.on("messageCreate", (message) => {
     const channel = Config.channelId;
@@ -36,4 +34,8 @@ client.on("interactionCreate", interation => {
         sManager.onInteraction(interation);
     }
 })
+if (Config.botToken === "YOUR_TOKEN_HERE") {
+    console.error("See config.js to configure bot.");
+    process.exit(0);
+}
 client.login(Config.botToken);

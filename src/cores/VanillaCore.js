@@ -1,0 +1,80 @@
+const fs = require("fs");
+const Core = require('./Core');
+const https = require("https");
+const ServerManager = require("../ServerManager");
+const {spawn} = require("child_process");
+const config = require("../../Config");
+const miniget = require('miniget');
+
+
+class VanillaCore extends Core {
+    static VANILLA_VERSION_MANIFEST = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json";
+
+
+    constructor(serverManager) {
+        super(serverManager);
+    }
+
+    /**
+     * @override
+     * @returns {Promise<unknown>}
+     */
+    async install() {
+        return new Promise(async (resolve, reject) => {
+            if (fs.existsSync("./jars/Minecraft-" + this.serverManager.vManager.selectedVersion["id"] + ".jar")) {
+                resolve(false);
+                return;
+            }
+            await this.serverManager.messageWorker.sendLogMessage(`Downloading ${this.serverManager.vManager.selectedVersion["type"]} ${this.serverManager.vManager.selectedVersion["id"]}`);
+            let downloadingLink = await this.serverManager.vManager.getDownloadingLink();
+            if (downloadingLink == null) {
+                reject("Link is empty");
+                return;
+            }
+            https.get(downloadingLink, res => {
+                let writeStream = fs.createWriteStream("./jars/Minecraft-" + this.serverManager.vManager.selectedVersion["id"] + ".jar");
+                res.pipe(writeStream);
+                res.on("close", () => {
+                    resolve(true);
+                })
+                res.on("error", (err) => {
+                    console.error(err);
+                    reject(err);
+                })
+            });
+        });
+    }
+
+    /**
+     * @override
+     * @returns {Promise<ChildProcessWithoutNullStreams>}
+     */
+    async createServerProcess() {
+        return spawn('java', ['-jar', '-Xmx' + config.maxMemory, '-Xms' + config.initialMemory, `../jars/Minecraft-${this.serverManager.vManager.selectedVersion["id"]}.jar`, 'nogui'], {cwd: "./server/"});
+    }
+
+    /**
+     * @override
+     * @returns {Promise<String[]>}
+     */
+    async getReleases() {
+        let data = await miniget(VanillaCore.VANILLA_VERSION_MANIFEST).text();
+        let manifest = JSON.parse(data);
+        let mainReleases = {};
+        let versions = manifest["versions"];
+        for (let i = 0; i < versions.length; i++) {
+            const ver = versions[i];
+            if (ver["type"] !== "release") continue;
+            let matches = ver["id"].match(/^(\d\.\d*)(\.\d*|)$/m);
+            let mainVersion = matches[1];
+            if (!mainReleases.hasOwnProperty(mainVersion)) {
+                mainReleases[mainVersion] = ver["id"];
+            }
+            if (Object.keys(mainReleases).length >= 11) {
+                break;
+            }
+        }
+        return Object.values(mainReleases);
+    }
+}
+module.exports = VanillaCore;

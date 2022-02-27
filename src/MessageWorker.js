@@ -67,7 +67,7 @@ class MessageWorker {
         } catch (e) {
             console.log("Unable to find messages in channel!");
         }
-        this.mainMessage = this.mainMessage ?? await this.channel.send(this.buildMainMessage());
+        this.mainMessage = this.mainMessage ?? await this.channel.send(await this.buildMainMessage());
         this.logMessage = this.logMessage ?? await this.channel.send("> Bot is started...");
         await this.sendMainMessage();
         await this.sendLogMessage("Bot is started!");
@@ -75,7 +75,7 @@ class MessageWorker {
     }
 
     async sendMainMessage(content = "Nothing") {
-        await this.mainMessage.edit(this.buildMainMessage(content));
+        await this.mainMessage.edit(await this.buildMainMessage(content));
     }
 
     async sendLogMessage(content) {
@@ -86,15 +86,20 @@ class MessageWorker {
      *
      * @returns {Discord.MessageEditOptions}
      */
-    buildMainMessage(content = "Nothing") {
+    async buildMainMessage(content = "Nothing") {
         let initiator = this.serverManager.initiator;
         let row = new MessageActionRow();
+        let addComponent = true;
         switch (this.serverManager.state) {
             case "WAITING":
                 row.addComponents(this.mapManager.buildMapSelector());
                 break;
             case "V_SELECTION":
-                row.addComponents(this.serverManager.getVersionManager().getMessageComponent());
+                row.addComponents(await this.serverManager.getVersionManager().getMessageComponent());
+                break;
+            case "W_DOWNLOADING":
+            case "V_DOWNLOADING":
+                addComponent = false;
                 break;
             case "RP_SELECTION":
                 let noRpButton = new MessageButton()
@@ -123,8 +128,14 @@ class MessageWorker {
             .addField("Status", MessageWorker.resolveStatus(this.serverManager.state), true)
             .addField("Initiator", initiator ? `<@!${initiator.id}>` : "N/A", true)
             .addField("IP", "`" + config.publicIP + "`", true)
-            .addField("Message", content, true)
-        return {content: " ", embeds: [embed], components: [row]};
+            //.addField("Version", (this?.serverManager?.vManager?.selectedVersion ?? "N/A"), true)
+            .addField("Message", content, false)
+        if (addComponent) {
+            return {content: " ", embeds: [embed], components: [row]};
+        } else {
+            return {content: " ", embeds: [embed], components: []};
+        }
+
     }
 
     static resolveStatus(state) {

@@ -1,36 +1,46 @@
 const https = require("https");
 const {MessageSelectMenu} = require("discord.js");
+const ServerManager = require("./ServerManager");
 
 class VersionManager {
-    static VERSION_MANIFEST = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json";
+
+    static VANILLA_VERSION_MANIFEST = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json";
+    static FABRIC_INSTALLER_MANIFEST = "https://meta.fabricmc.net/v2/versions/installer";
+
+    static ManifestList = [VersionManager.VANILLA_VERSION_MANIFEST, VersionManager.FABRIC_INSTALLER_MANIFEST];
     /**
      *
      * @type {String}
      */
-    manifest = null;
+    vaniila_manifest = null;
+    /**
+     * @type {ServerManager}
+     */
+    serverManager;
     /**
      *
      * @type {JSON}
      */
-    jsonManifest = null;
+    jsonVanillaManifest = null;
     selectedVersion = null;
-    constructor() {
-        this.loadManifest();
+    constructor(serverManager) {
+        this.serverManager = serverManager;
+        this.loadManifest(VersionManager.VANILLA_VERSION_MANIFEST);
     }
 
-    async loadManifest() {
+    async loadManifest(link) {
         return new Promise((resolve, reject) => {
-            https.get(VersionManager.VERSION_MANIFEST, res => {
+            https.get(link, res => {
                 /**
                  * @type {String}
                  */
                 let data = "";
                 res.on("data", chunk => data += chunk.toString());
                 res.on("close", () => {
-                    this.manifest = data;
+                    this.vaniila_manifest = data;
                     try {
-                        this.jsonManifest = JSON.parse(this.manifest);
-                        resolve(this.jsonManifest)
+                        this.jsonVanillaManifest = JSON.parse(this.vaniila_manifest);
+                        resolve(this.jsonVanillaManifest)
                     } catch (e) {
                         console.error("Bad Manifest");
                         reject("Bad Manifest");
@@ -45,11 +55,11 @@ class VersionManager {
     }
 
     findVersion(version) {
-        if (this.jsonManifest == null) {
+        if (this.jsonVanillaManifest == null) {
             return null;
         }
 
-        let versions = this.jsonManifest["versions"];
+        let versions = this.jsonVanillaManifest["versions"];
         for (let i = 0; i < versions.length; i++) {
             const ver = versions[i];
             if (ver["id"] === version) {
@@ -64,7 +74,7 @@ class VersionManager {
         return selectedVersion;
     }
     getReleases() {
-        if (this.jsonManifest == null) {
+        if (this.jsonVanillaManifest == null) {
             return null;
         }
         /**
@@ -72,7 +82,7 @@ class VersionManager {
          * @type {Object}
          */
         let mainReleases = {};
-        let versions = this.jsonManifest["versions"];
+        let versions = this.jsonVanillaManifest["versions"];
         for (let i = 0; i < versions.length; i++) {
             const ver = versions[i];
             if (ver["type"] !== "release") continue;
@@ -91,10 +101,10 @@ class VersionManager {
         return mainReleases;
     }
     getLatestRelease() {
-        return this?.jsonManifest?.["latest"]?.["release"];
+        return this?.jsonVanillaManifest?.["latest"]?.["release"];
     }
     getLatestSnapshot() {
-        return this?.jsonManifest?.["latest"]?.["snapshot"];
+        return this?.jsonVanillaManifest?.["latest"]?.["snapshot"];
     }
     /**
      * @private
@@ -142,9 +152,8 @@ class VersionManager {
      *
      * @returns {MessageSelectMenu}
      */
-    getMessageComponent() {
-        const releases = this.getReleases();
-        const versions = Object.values(releases);
+    async getMessageComponent() {
+        const versions = await this.serverManager.core.getReleases();
         let versionSelection = new MessageSelectMenu()
             .setMinValues(1)
             .setMaxValues(1)
@@ -152,13 +161,15 @@ class VersionManager {
             .setCustomId("v_select")
         for (let i = 0; i < versions.length; i++) {
             versionSelection.addOptions({
-                "label": versions[i]['id'],
-                "description": versions[i]['type'],
-                "value": versions[i]['id']
+                "label": versions[i],
+                "description": "release",
+                "value": versions[i]
             });
         }
         return versionSelection;
     }
+
+
 }
 
 module.exports = VersionManager;

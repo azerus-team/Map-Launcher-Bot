@@ -2,3 +2,7 @@ Test.js
 .idea
 .gitignore
 node_modules
+server
+jars
+Config1.js
+messages.json
