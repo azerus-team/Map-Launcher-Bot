@@ -3,11 +3,12 @@ const Discord = require('discord.js');
 const client = new Discord.Client({intents: ["GUILDS", "GUILD_MESSAGE_REACTIONS", "GUILD_MESSAGES"]});
 const ServerManager = require("./src/ServerManager");
 const {MessageComponentInteraction} = require("discord.js");
+const Logger = require('./src/Logger');
 let sManager;
 
 
 client.on("ready", () => {
-    console.log("Map Testing bot is started");
+    Logger.log("Map Testing bot started");
     sManager = new ServerManager(client);
     setInterval(() => {
         // noinspection JSIgnoredPromiseFromCall

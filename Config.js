@@ -11,9 +11,9 @@ exports.maxMemory = "4G";
 exports.onlineMode = true;
 exports.maxPlayers = 50;
 //  Upload map to transfer.sh and gives link after closing server.
-exports.generateDownloadLink = true;
+exports.generateDownloadLink = false;
 // Minecraft End User License Agreement available at https://account.mojang.com/documents/minecraft_eula.
-exports.eula = false;
+exports.eula = true;
 
 //Configure your main message
 exports.title = "Map launcher bot";

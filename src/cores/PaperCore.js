@@ -50,12 +50,12 @@ class PaperCore extends Core {
      */
     async getDownloadLink() {
         let selectedVersion = this.serverManager.vManager.selectedVersion["id"];
-
         let buildManifest = await miniget(PaperCore.BUILDS_MANIFEST(selectedVersion)).text();
         let buildManifestJson = JSON.parse(buildManifest);
         if (buildManifestJson["error"]) return null
         let builds = buildManifestJson["builds"];
         let latestBuildNumber = builds[builds.length - 1];
+        if (selectedVersion || latestBuildNumber) return null;
         return PaperCore.DOWNLOAD_LINK(selectedVersion, latestBuildNumber);
     }
 
@@ -64,7 +64,7 @@ class PaperCore extends Core {
      * @returns {Promise<ChildProcessWithoutNullStreams>}
      */
     async createServerProcess() {
-        return spawn('java', ['-jar', '-Xmx' + config.maxMemory, '-Xms' + config.initialMemory, '../jars/' + `Paper-${this.serverManager.vManager.selectedVersion["id"]}.jar`, 'nogui'], {cwd: "./server/"});
+        return spawn('java', ['-jar', '-Xmx' + config.maxMemory, '-Xms' + config.initialMemory, '../jars/' + `Paper-${this.serverManager.vManager.selectedVersion["id"]}.jar`, 'nogui', '-Dlog4j2.formatMsgNoLookups=true', `${hasLog4JFixFile?"-Dlog4j.configurationFile=log4j_conf.xml":""}`], {cwd: "./server/"});
     }
     async getReleases() {
         //https://papermc.io/api/v2/projects/paper

@@ -2,10 +2,11 @@ const Discord = require('discord.js');
 const config = require("./../Config");
 const fs = require("fs");
 const {TextChannel, MessagePayload, RichPresenceAssets, MessageEmbed, MessageComponentInteraction, MessageSelectMenu,
-    InteractionCollector, MessageActionRow, MessageButton
+    InteractionCollector, MessageActionRow, MessageButton, Message
 } = require("discord.js");
 const MapManager = require("./MapManager");
 const ServerManager = require("./ServerManager");
+const SharedConstants = require('./SharedConstants');
 
 class MessageWorker {
     /**
@@ -46,10 +47,14 @@ class MessageWorker {
         this.fetchMessages();
     }
 
+    /**
+     *
+     * @returns {Promise<void>}
+     */
     async fetchMessages() {
-        let msFile = fs.readFileSync("./messages.json").toString();
         let msID = {};
         try {
+            let msFile = fs.readFileSync(SharedConstants.MessageFile).toString();
             msID = JSON.parse(msFile);
         } catch (e) {
         }
@@ -58,9 +63,7 @@ class MessageWorker {
          * @type {TextChannel}
          */
         this.channel = await this.client.channels.fetch(config.channelId);
-
         if (!(this.channel instanceof TextChannel)) return;
-
         try {
             this.mainMessage = await this.channel.messages.fetch(msID["MAIN"].toString());
             this.logMessage = await this.channel.messages.fetch(msID["LOG"].toString());
@@ -71,17 +74,19 @@ class MessageWorker {
         this.logMessage = this.logMessage ?? await this.channel.send("> Bot is started...");
         await this.sendMainMessage();
         await this.sendLogMessage("Bot is started!");
-        fs.writeFileSync("./messages.json", JSON.stringify({"MAIN": this.mainMessage.id, "LOG": this.logMessage.id}));
+        fs.writeFileSync(SharedConstants.MessageFile, JSON.stringify({"MAIN": this.mainMessage.id, "LOG": this.logMessage.id}));
     }
-
     async sendMainMessage(content = "Nothing") {
         await this.mainMessage.edit(await this.buildMainMessage(content));
     }
-
+    /**
+     *
+     * @param {String} content
+     * @returns {Promise<void>}
+     */
     async sendLogMessage(content) {
         await this.logMessage.edit("> " + content);
     }
-
     /**
      *
      * @returns {Discord.MessageEditOptions}
@@ -130,6 +135,7 @@ class MessageWorker {
             .addField("IP", "`" + config.publicIP + "`", true)
             //.addField("Version", (this?.serverManager?.vManager?.selectedVersion ?? "N/A"), true)
             .addField("Message", content, false)
+
         if (addComponent) {
             return {content: " ", embeds: [embed], components: [row]};
         } else {
@@ -142,6 +148,9 @@ class MessageWorker {
         switch (state) {
             case "WAITING":
                 return "🟣 Waiting";
+            case "V_DOWNLOADING":
+            case "W_DOWNLOADING":
+                return "🟣 Downloading"
             case "V_SELECTION":
                 return "🔵 Selecting version";
             case "RP_SELECTION":

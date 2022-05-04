@@ -9,16 +9,19 @@ const { spawn, spawnSync } = require("child_process");
 const unzipper = require("unzipper");
 const githubManager = require("./GitHubReleaseDownloader");
 const MessageWorker = require("./MessageWorker");
+
 const VanillaCore = require("./cores/VanillaCore");
 const PaperCore = require("./cores/PaperCore");
 const FabricCore = require("./cores/FabricCore");
 
-
-const config = require("./../Config");
+const SharedConstants = require('./SharedConstants');
+const config = require("./config/ConfigProperties");
 const fs = require("fs");
 const {TextChannel, Snowflake, SelectMenuInteraction, ButtonInteraction} = require("discord.js");
 const zlib = require("zlib");
 const { parse } = require('prismarine-nbt')
+const Logger = require('./Logger');
+
 class ServerManager {
     static numericEmojis = ["0️⃣","1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟"]
     resourcePackLink = null;
@@ -76,20 +79,22 @@ class ServerManager {
      * @type {Core}
      */
     core;
+    config = config.handle();
     /**
      *
      * @param {Discord.Client} client
      * @param {VersionManager} vManager
      */
+
     constructor(client) {
         this.messageWorker = new MessageWorker(client, this.mapManager, this);
-        if (!fs.existsSync("./jars")) {
-            fs.mkdirSync("./jars");
+        if (!fs.existsSync(SharedConstants.jarsFolder)) {
+            fs.mkdirSync(SharedConstants.jarsFolder);
         }
-        if (!fs.existsSync("./server")) {
-            fs.mkdirSync("./server");
+        if (!fs.existsSync(SharedConstants.serverFolder)) {
+            fs.mkdirSync(SharedConstants.serverFolder);
         }
-        switch (config.core) {
+        switch (this.config.core) {
             case "PAPER":
                 this.core = new PaperCore(this);
                 break;
@@ -131,26 +136,31 @@ class ServerManager {
         }
     }
     async downloadJarIfNotExist() {
-        await this.core.install();
+        this.core.install()
+            .then(_ => {
+
+            })
+            .catch(err => {
+                this.messageWorker.sendMainMessage("Unable to download server with provided version.");
+            });
     }
     setResourcePack(link) {
         this.resourcePackLink = link;
     }
     createServerProperties() {
-        fs.writeFileSync("./server/server.properties", `
-            server-port=${config.serverPort}
-            spawn-protection=0
-            gamemode=survival
-            resource-pack=${this.resourcePackLink ?? ""}
-            enable-command-block=true
-            max-players=${config.maxPlayers}
-            online-mode=${config.onlineMode}
-            op-permission-level=2
-            allow-flight=true
-            player-idle-timeout=15
-            motd=${config.motd(this.initiator.username)}
-        `);
-        fs.writeFileSync("./server/eula.txt", "eula=" + config.eula);
+        fs.writeFileSync(SharedConstants.serverFolder + "/server.properties",
+            `server-port=${this.config.serverPort}\n` +
+            `spawn-protection=0\n` +
+            `gamemode=survival\n` +
+            `resource-pack=${this.resourcePackLink ?? ""}\n` +
+            `enable-command-block=true\n` +
+            `max-players=${this.config.maxPlayers}\n` +
+            `online-mode=${this.config.onlineMode}\n` +
+            `op-permission-level=2\n` +
+            `allow-flight=true\n` +
+            `player-idle-timeout=15\n` +
+            `motd=${this.config.motd(this.initiator.username)}` , "utf8");
+        fs.writeFileSync(SharedConstants.serverFolder + "/eula.txt", "eula=" + this.config.eula);
     }
     /**
      *
@@ -331,8 +341,9 @@ class ServerManager {
                 if (!(interaction instanceof SelectMenuInteraction)) return;
                 let alias = interaction.values[0];
                 try {
-                    await interaction.update({fetchReply: false})
+                    await interaction.update({fetchReply: false, ...this.messageWorker.buildMainMessage()});
                 } catch (e) {}
+
                 this.state = ServerManager.States.DOWNLOADING_WORLD;
                 await this.messageWorker.sendMainMessage("Preparing map...");
                 let mapFromEmoji = this.mapManager.getMapFromAlias(alias);
@@ -432,8 +443,8 @@ class ServerManager {
         this.state = "STARTING";
         await this.messageWorker.sendMainMessage();
         await this.messageWorker.sendLogMessage("Starting server...");
-
-        this.createServerProperties();
+        Logger.log("Server is about to start!");
+        await this.createServerProperties();
         this.serverProcess = await this.core.createServerProcess();
         this.serverProcess.stdout.on("data", chunk => {
             this.onConsoleMessage(chunk);

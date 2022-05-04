@@ -1,4 +1,3 @@
-const Repo = require("./Repo");
 
 class Map {
     /**
@@ -6,19 +5,19 @@ class Map {
      */
     title;
     /**
-     * @Deprecated
-     * @type {Repo}
-     */
-    repo;
-    /**
      * {String}
      */
     url;
     alias;
     emojiId;
     version;
+    /**
+     * @deprecated
+     */
     discordEmoji;
     resourcePack;
+
+    
     constructor(config) {
         if (config == null) {
             console.error("config is null");
@@ -28,8 +27,18 @@ class Map {
         this.url = config["url"];
         this.emojiId = config["emojiId"];
         this.version = config["version"];
-        this.discordEmoji = config["discordEmoji"];
         this.resourcePack = config["resourcePack"]
+    }
+    static handle(config) {
+        if (config == null) return;
+        let title = config["title"];
+        let alias = config["alias"];
+        let url = config["url"];
+        let emojiId = config["emojiId"];
+        let version = config["version"];
+        let resourcePack = config["resourcePack"]
+        if (!(title && alias && url && emojiId && version && resourcePack)) return;
+        return new Map(config);
     }
 
 }

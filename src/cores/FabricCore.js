@@ -66,7 +66,7 @@ class FabricCore extends Core {
      * @returns {Promise<ChildProcessWithoutNullStreams>}
      */
     async createServerProcess() {
-        return spawn('java', ['-jar', '-Xmx' + config.maxMemory, '-Xms' + config.initialMemory, '' + "fabric-server-launch.jar", 'nogui'], {cwd: "./server/"});
+        return spawn('java', ['-jar', '-Xmx' + config.maxMemory, '-Xms' + config.initialMemory, '' + "fabric-server-launch.jar", 'nogui', '-Dlog4j2.formatMsgNoLookups=true', `${hasLog4JFixFile?"-Dlog4j.configurationFile=log4j_conf.xml":""}`], {cwd: "./server/"});
     }
 
     /**
