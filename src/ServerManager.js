@@ -148,18 +148,35 @@ class ServerManager {
         this.resourcePackLink = link;
     }
     createServerProperties() {
-        fs.writeFileSync(SharedConstants.serverFolder + "/server.properties",
-            `server-port=${this.config.serverPort}\n` +
-            `spawn-protection=0\n` +
-            `gamemode=survival\n` +
+        let serverProperties = {}
+        if (!this.isCustomMap) {
+            serverProperties = this.mapManager.selectedMap["serverConfig"]?.["server.properties"] ?? {};
+        }
+        let props = `server-port=${this.config.serverPort}\n` +
+            `spawn-protection=${serverProperties["spawn-protection"] ?? '0'}\n` +
+            `gamemode=${serverProperties["gamemode"] ?? 'survival'}\n` +
             `resource-pack=${this.resourcePackLink ?? ""}\n` +
-            `enable-command-block=true\n` +
-            `max-players=${this.config.maxPlayers}\n` +
+            `enable-command-block=${serverProperties["enable-command-block"] ?? true}\n` +
+            `max-players=${serverProperties["max-players"] ?? this.config.maxPlayers}\n` +
             `online-mode=${this.config.onlineMode}\n` +
             `op-permission-level=2\n` +
-            `allow-flight=true\n` +
-            `player-idle-timeout=15\n` +
-            `motd=${this.config.motd(this.initiator.username)}` , "utf8");
+            `allow-flight=${serverProperties["allow-flight"] ?? true}\n` +
+            `player-idle-timeout=${serverProperties["player-idle-timeout"] ?? 15}\n` +
+            `motd=${this.config.motd(this.initiator.username)}\n`;
+        console.log(serverProperties);
+        for (let key in serverProperties) {
+            console.log(key);
+            if (key === "spawn-protection" ||
+                key === "gamemode" ||
+                key === "enable-command-block" ||
+                key === "max-players" ||
+                key === "allow-flight" ||
+                key === "player-idle-timeout"
+            ) continue
+            props += key + "=" + serverProperties[key] + "\n";
+        }
+        fs.writeFileSync(SharedConstants.serverFolder + "/server.properties",
+            props , "utf8");
         fs.writeFileSync(SharedConstants.serverFolder + "/eula.txt", "eula=" + this.config.eula);
     }
     /**
@@ -232,7 +249,7 @@ class ServerManager {
         }
         if (!this.isCustomMap) {
             let resourcePack = this.mapManager.selectedMap.resourcePack;
-            this.setResourcePack(resourcePack)
+            this.setResourcePack(resourcePack);
             await this.startServer()
             return;
         }
@@ -348,7 +365,7 @@ class ServerManager {
                 await this.messageWorker.sendMainMessage("Preparing map...");
                 let mapFromEmoji = this.mapManager.getMapFromAlias(alias);
                 if (mapFromEmoji == null) {
-                    console.error("Map from emoji is null!");
+                    Logger.warn("Map from emoji is null!")
                     return;
                 }
                 this.initiator = interaction.member.user;

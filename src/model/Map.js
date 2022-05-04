@@ -16,8 +16,8 @@ class Map {
      */
     discordEmoji;
     resourcePack;
+    serverConfig;
 
-    
     constructor(config) {
         if (config == null) {
             console.error("config is null");
@@ -28,6 +28,7 @@ class Map {
         this.emojiId = config["emojiId"];
         this.version = config["version"];
         this.resourcePack = config["resourcePack"]
+        this.serverConfig = config["serverConfig"];
     }
     static handle(config) {
         if (config == null) return;
@@ -36,8 +37,7 @@ class Map {
         let url = config["url"];
         let emojiId = config["emojiId"];
         let version = config["version"];
-        let resourcePack = config["resourcePack"]
-        if (!(title && alias && url && emojiId && version && resourcePack)) return;
+        if (!(title && alias && url && emojiId && version)) return;
         return new Map(config);
     }
 
