@@ -29,6 +29,12 @@ class MessageConfig {
         this.description = description;
         this.sideColor = sideColor;
     }
+
+    /**
+     *
+     * @param config
+     * @returns {MessageConfig}
+     */
     static handle(config) {
         let messageNode = config["message"];
         if (!messageNode) {

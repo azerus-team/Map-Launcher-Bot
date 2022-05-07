@@ -1,21 +1,14 @@
 [
   {
-    "__comment": "You can list here your maps to start. Accept only direct link!",
-    "title": "Quartz Defenders",
-    "alias": "qw",
-    "url": "https://cdn.discordapp.com/attachments/458936644582637573/971464754612826152/Quartz_Defenders_1.8.1.zip",
-    "version": "1.8.9",
+    "title": "Puzzle Wars",
+    "alias": "pw",
+    "url": "https://azerusteam.com/download/puzzle-wars.zip",
+    "version": "1.18.2",
     "emojiId": "529361621022277635",
-    "discordEmoji" : "<pw:529361621022277635>",
     "serverConfig": {
       "server.properties": {
-        "max-build-height": 100,
-        "spawn-protection": 0,
         "max-players": 8,
-        "view-distance": 8,
-        "gamemode": 2,
-        "announce-player-achievements": false,
-        "difficulty": 3
+        "allow-nether": false
       }
     }
   },
@@ -23,50 +16,88 @@
     "title": "Maze Wars",
     "alias": "mw",
     "url": "https://azerusteam.com/download/maze-wars.zip",
-    "version": "1.17.1",
+    "version": "1.18.2",
     "emojiId": "595267046049185822",
-    "discordEmoji" : "<mw:595267046049185822>"
+    "serverConfig": {
+      "server.properties": {
+        "allow-nether": false
+      }
+    }
   },
   {
     "title": "Math Fractals",
     "alias": "mf",
     "url": "https://azerusteam.com/download/math-fractals.zip",
-    "version": "1.18.1",
+    "version": "latest",
     "emojiId": "818159235245277194",
-    "discordEmoji": "<:mf:818159235245277194>"
+    "serverConfig": {
+      "server.properties": {
+        "allow-nether": false
+      }
+    }
   },
   {
     "title": "Block Combat",
     "alias": "bc",
     "url": "https://azerusteam.com/download/block-combat.zip",
-    "version": "1.18.1",
+    "version": "1.18.2",
     "emojiId": "818159524468883466",
-    "discordEmoji": "<:bc:818159524468883466>"
+    "serverConfig": {
+      "server.properties": {
+        "max-players": 11,
+        "allow-nether": false
+      }
+    }
   },
   {
     "title": "Wings Wars",
     "alias": "ww",
     "url": "https://azerusteam.com/download/wings-wars.zip",
-    "version": "1.18.1",
+    "version": "1.18.2",
     "emojiId": "818159624267104266",
-    "discordEmoji": "<:ww:818159624267104266>"
+    "serverConfig": {
+      "server.properties": {
+        "allow-nether": false
+      }
+    }
   },
   {
     "title": "Dodgearrow",
     "alias": "da",
     "emojiId": "841655094331703376",
     "url": "https://azerusteam.com/download/dodgearrow.zip",
-    "version": "1.18.1",
+    "version": "1.17.1",
     "resourcePack": "https://azerusteam.com/resources/dodgearrow_resources.zip",
-    "discordEmoji": "<:da:841655094331703376>"
+    "serverConfig": {
+      "server.properties": {
+        "allow-nether": false
+      }
+    }
   },
   {
     "title": "Feed the Ravager",
     "alias": "fr",
     "emojiId": "905308184711929857",
     "url": "https://azerusteam.com/download/feed-the-ravager.zip",
-    "version": "1.18.1",
+    "version": "1.18.2",
     "resourcePack": "https://azerusteam.com/resources/feed-the-ravager_resources.zip",
-    "discordEmoji": "<:ftr:905308184711929857>"
+    "serverConfig": {
+      "server.properties": {
+        "allow-nether": false
+      }
+    }
+  },
+  {
+    "title": "Fresh Designs",
+    "alias": "fd",
+    "emojiId": "921377124403793940",
+    "url": "https://azerusteam.com/download/fresh-designs.zip",
+    "version": "1.18.2",
+    "resourcePack": "https://azerusteam.com/resources/fresh-designs_resources.zip",
+    "serverConfig": {
+      "server.properties": {
+        "allow-nether": false
+      }
+    }
   }
 ]

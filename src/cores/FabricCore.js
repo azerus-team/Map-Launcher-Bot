@@ -1,9 +1,9 @@
 const Core = require("./Core");
 const fs = require("fs");
-const https = require("https");
 const miniget = require("miniget");
 const { spawn, spawnSync } = require("child_process");
-const config = require("../../Config");
+const Logger = require("../Logger");
+const SharedConstants = require("../SharedConstants");
 
 class FabricCore extends Core {
     static FABRIC_LAUNCHER_MANIFEST = "https://meta.fabricmc.net/v2/versions/installer"
@@ -55,7 +55,7 @@ class FabricCore extends Core {
     }
     async runFabricInstaller() {
         //java -jar ../jars/Fabric-Launcher-1.17.1.jar server -mcversion 1.18.1 -downloadMinecraft
-        let out = await spawnSync("java", ["-jar", '../jars/' + `Fabric-Launcher-${this.serverManager.vManager.selectedVersion["id"]}.jar`, "server", "-mcversion", this.serverManager.vManager.selectedVersion["id"], "-downloadMinecraft"]
+        let out = await spawnSync(this.serverManager.config.javaPath, ["-jar", '../jars/' + `Fabric-Launcher-${this.serverManager.vManager.selectedVersion["id"]}.jar`, "server", "-mcversion", this.serverManager.vManager.selectedVersion["id"], "-downloadMinecraft"]
             , {cwd: "./server/"}
         );
         process.stdout.write(out);
@@ -66,9 +66,17 @@ class FabricCore extends Core {
      * @returns {Promise<ChildProcessWithoutNullStreams>}
      */
     async createServerProcess() {
-        return spawn('java', ['-jar', '-Xmx' + config.maxMemory, '-Xms' + config.initialMemory, '' + "fabric-server-launch.jar", 'nogui', '-Dlog4j2.formatMsgNoLookups=true', `${hasLog4JFixFile?"-Dlog4j.configurationFile=log4j_conf.xml":""}`], {cwd: "./server/"});
+        let hasLog4JFixFile = await this.serverManager.vManager.hasLog4JFixFile();
+        let args = ['-jar',
+            '-Xmx' + this.serverManager.config.maxMemory,
+            '-Xms' + this.serverManager.config.initialMemory,
+            '-Dlog4j2.formatMsgNoLookups=true',
+            `fabric-server-launch.jar`,
+            'nogui'];
+        if (hasLog4JFixFile) args.push("-Dlog4j.configurationFile=log4j_conf.xml")
+        Logger.log("Running with args: " + args.join(", "));
+        return spawn(this.serverManager.config.javaPath, args, {cwd: SharedConstants.serverFolder});
     }
-
     /**
      *
      * @returns {Promise<unknown[]>}

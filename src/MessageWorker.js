@@ -1,5 +1,4 @@
 const Discord = require('discord.js');
-const config = require("./../Config");
 const fs = require("fs");
 const {TextChannel, MessagePayload, RichPresenceAssets, MessageEmbed, MessageComponentInteraction, MessageSelectMenu,
     InteractionCollector, MessageActionRow, MessageButton, Message
@@ -44,7 +43,9 @@ class MessageWorker {
         this.client = client;
         this.mapManager = mapManager;
         this.serverManager = serverManager;
-        this.fetchMessages();
+        this.fetchMessages().catch(err => {
+            console.error("Something went wrong file fetch messages! Err: " + err);
+        });
     }
 
     /**
@@ -62,7 +63,7 @@ class MessageWorker {
          *
          * @type {TextChannel}
          */
-        this.channel = await this.client.channels.fetch(config.channelId);
+        this.channel = await this.client.channels.fetch(this.serverManager.config.channelId);
         if (!(this.channel instanceof TextChannel)) return;
         try {
             this.mainMessage = await this.channel.messages.fetch(msID["MAIN"].toString());
@@ -71,7 +72,7 @@ class MessageWorker {
             console.log("Unable to find messages in channel!");
         }
         this.mainMessage = this.mainMessage ?? await this.channel.send(await this.buildMainMessage());
-        this.logMessage = this.logMessage ?? await this.channel.send("> Bot is started...");
+        this.logMessage = this.logMessage ?? await this.channel.send("> Bot is started!");
         await this.sendMainMessage();
         await this.sendLogMessage("Bot is started!");
         fs.writeFileSync(SharedConstants.MessageFile, JSON.stringify({"MAIN": this.mainMessage.id, "LOG": this.logMessage.id}));
@@ -97,7 +98,12 @@ class MessageWorker {
         let addComponent = true;
         switch (this.serverManager.state) {
             case "WAITING":
-                row.addComponents(this.mapManager.buildMapSelector());
+                let components = this.mapManager.buildMapSelector();
+                if (components == null) {
+                    addComponent = false;
+                    break;
+                }
+                row.addComponents(components);
                 break;
             case "V_SELECTION":
                 row.addComponents(await this.serverManager.getVersionManager().getMessageComponent());
@@ -124,16 +130,17 @@ class MessageWorker {
                 row.addComponents(stopServerButton)
                 break;
         }
+        let messageConfig = this.serverManager.config.message;
         let embed = new MessageEmbed()
-            .setTitle(config.title)
-            .setDescription(config.description)
-            .setColor(config.sideColor)
-            .setFooter(config.footerMessage)
+            .setTitle(messageConfig.title)
+            .setDescription(messageConfig.description)
+            .setColor(messageConfig.sideColor)
+            .setFooter(messageConfig.footer)
 
             .addField("Status", MessageWorker.resolveStatus(this.serverManager.state), true)
             .addField("Initiator", initiator ? `<@!${initiator.id}>` : "N/A", true)
-            .addField("IP", "`" + config.publicIP + "`", true)
-            //.addField("Version", (this?.serverManager?.vManager?.selectedVersion ?? "N/A"), true)
+            .addField("IP", "`" + messageConfig.ip + "`", true)
+            .addField("Version", `\`${(this?.serverManager?.vManager?.selectedVersion?.id ?? "N/A")}\``, true)
             .addField("Message", content, false)
 
         if (addComponent) {

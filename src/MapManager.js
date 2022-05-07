@@ -2,6 +2,7 @@ const Discord = require("discord.js");
 const fs = require("fs");
 const Map = require("./model/Map");
 const {MessageSelectMenu} = require("discord.js");
+const Logger = require('./Logger');
 
 class MapManager {
     /**
@@ -19,7 +20,7 @@ class MapManager {
             let mapsFile = fs.readFileSync("maps.json");
             maps = JSON.parse(mapsFile.toString());
         } catch (e) {
-            console.error("Unable to parse maps.json!")
+            Logger.warn("Unable to parse maps.json!");
         }
         for (let map of maps) {
             let handledMap = Map.handle(map);
@@ -39,9 +40,10 @@ class MapManager {
     }
     /**
      *
-     * @returns {MessageSelectMenu}
+     * @returns {MessageSelectMenu|null}
      */
     buildMapSelector() {
+        if (this.maps.length === 0) return null
         return new MessageSelectMenu()
             .setMaxValues(1)
             .setMinValues(1)
@@ -52,7 +54,8 @@ class MapManager {
                        "label": value.title,
                        "value": value.alias,
                        "emoji": {
-                           "id": value.emojiId
+                           "id": value.emojiId,
+                           "name": value.emojiName
                        }
                    }
                 }));

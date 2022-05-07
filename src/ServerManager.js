@@ -2,12 +2,12 @@ const VersionManager = require("./VersionManager.js");
 const https = require("https");
 const http = require("http");
 const Discord = require("discord.js");
-
+const miniget = require("miniget");
+const path = require("path");
 const MapManager = require("./MapManager");
 const { zip } = require("zip-a-folder");
 const { spawn, spawnSync } = require("child_process");
 const unzipper = require("unzipper");
-const githubManager = require("./GitHubReleaseDownloader");
 const MessageWorker = require("./MessageWorker");
 
 const VanillaCore = require("./cores/VanillaCore");
@@ -88,12 +88,10 @@ class ServerManager {
 
     constructor(client) {
         this.messageWorker = new MessageWorker(client, this.mapManager, this);
-        if (!fs.existsSync(SharedConstants.jarsFolder)) {
-            fs.mkdirSync(SharedConstants.jarsFolder);
-        }
-        if (!fs.existsSync(SharedConstants.serverFolder)) {
-            fs.mkdirSync(SharedConstants.serverFolder);
-        }
+        this.createFolder(SharedConstants.jarsFolder);
+        this.createFolder(SharedConstants.serverFolder);
+        this.createFolder(SharedConstants.mapsFolder);
+
         switch (this.config.core) {
             case "PAPER":
                 this.core = new PaperCore(this);
@@ -106,19 +104,23 @@ class ServerManager {
                 break;
         }
     }
+    createFolder(path) {
+        if (!fs.existsSync(path)) fs.mkdirSync(path);
+    }
     async stopServer() {
-        this.state = "WAITING";
+        this.state = ServerManager.States.WAITING;
         this.players = [];
         if (this.resourcePackMessage != null) {
             await this.resourcePackMessage.delete();
         }
         this.resourcePackMessage = null;
+        this.vManager.selectedVersion = null;
         await this.messageWorker.sendMainMessage();
     }
     async onTick() {
         if (this.state === "HOSTING" && this.players.length === 0) {
             this.idleTime++;
-            if (this.idleTime > 20 * 60 * 10) { //10 minutes
+            if (this.idleTime > 20 * 60 * this.config.idleTime) { //10 minutes by Default
                 this.serverProcess.kill("SIGKILL");
             }
         } else if (this.state === "V_SELECTION") {
@@ -136,12 +138,10 @@ class ServerManager {
         }
     }
     async downloadJarIfNotExist() {
-        this.core.install()
-            .then(_ => {
-
-            })
+        await this.core.install()
             .catch(err => {
                 this.messageWorker.sendMainMessage("Unable to download server with provided version.");
+                Logger.warn("Unable to download server with provided version. Err: " + err);
             });
     }
     setResourcePack(link) {
@@ -152,7 +152,7 @@ class ServerManager {
         if (!this.isCustomMap) {
             serverProperties = this.mapManager.selectedMap["serverConfig"]?.["server.properties"] ?? {};
         }
-        let props = `server-port=${this.config.serverPort}\n` +
+        let props = `server-port=${this.config.port}\n` +
             `spawn-protection=${serverProperties["spawn-protection"] ?? '0'}\n` +
             `gamemode=${serverProperties["gamemode"] ?? 'survival'}\n` +
             `resource-pack=${this.resourcePackLink ?? ""}\n` +
@@ -160,19 +160,24 @@ class ServerManager {
             `max-players=${serverProperties["max-players"] ?? this.config.maxPlayers}\n` +
             `online-mode=${this.config.onlineMode}\n` +
             `op-permission-level=2\n` +
+            `level-name=world\n` +
             `allow-flight=${serverProperties["allow-flight"] ?? true}\n` +
             `player-idle-timeout=${serverProperties["player-idle-timeout"] ?? 15}\n` +
             `motd=${this.config.motd(this.initiator.username)}\n`;
-        console.log(serverProperties);
         for (let key in serverProperties) {
-            console.log(key);
             if (key === "spawn-protection" ||
                 key === "gamemode" ||
                 key === "enable-command-block" ||
                 key === "max-players" ||
                 key === "allow-flight" ||
-                key === "player-idle-timeout"
-            ) continue
+                key === "player-idle-timeout" ||
+                key === "server-port" ||
+                key === "resource-pack" ||
+                key === "online-mode" ||
+                key === "op-permission-level" ||
+                key === "level-name" ||
+                key === "motd"
+            ) continue;
             props += key + "=" + serverProperties[key] + "\n";
         }
         fs.writeFileSync(SharedConstants.serverFolder + "/server.properties",
@@ -181,25 +186,45 @@ class ServerManager {
     }
     /**
      *
-     * @param {String} link
+     * @param {URL} link
      * @returns {Promise<null>}
      */
     downloadWorldZip(link) {
-        fs.rmSync("./server/world",{recursive:true, force: true});
-        fs.rmSync("./server/logs",{recursive:true, force: true});
-        fs.rmSync("./server/tempWorld",{recursive:true, force: true});
-        fs.rmSync("./server/tempWorld.zip",{recursive:true, force: true})
-        return new Promise((resolve, reject) => {
-            https.get(link, res => {
-                let writeStream = fs.createWriteStream("./server/tempWorld.zip");
-                res.pipe(writeStream);
-                res.on("end",  resolve);
-                res.on("error", async err => {
+        fs.rmSync(SharedConstants.serverFolder + "/world",{recursive:true, force: true});
+        fs.rmSync(SharedConstants.serverFolder + "/world_nether",{recursive:true, force: true});
+        fs.rmSync(SharedConstants.serverFolder + "/world_the_end",{recursive:true, force: true});
+        fs.rmSync(SharedConstants.serverFolder + "/logs",{recursive:true, force: true});
+        fs.rmSync(SharedConstants.serverFolder + "/tempWorld",{recursive:true, force: true});
+        fs.rmSync(SharedConstants.serverFolder + "/tempWorld.zip",{recursive:true, force: true});
+        fs.rmSync(SharedConstants.serverFolder + "/cache",{recursive:true, force: true});
+        return new Promise(async (resolve, reject) => {
+            if (link.protocol === "https:" || link.protocol === "http:") {
+                let writeStream = fs.createWriteStream(SharedConstants.serverFolder + "/tempWorld.zip");
+                miniget(link).pipe(writeStream);
+                writeStream.on("close", () => {
+                    resolve();
+                });
+                writeStream.on("error", async (err) => {
                     console.error(err);
                     await this.messageWorker.sendLogMessage("I can't download map using this link!");
                     reject();
                 });
-            });
+            }
+            if (link.protocol === "file:" && link.pathname === "/") {
+                if (this.isCustomMap) {
+                    reject();
+                    await this.messageWorker.sendLogMessage("File is not safety!");
+                }
+                let src = path.join(SharedConstants.mapsFolder, link.hostname);
+                fs.copyFile(
+                    src,
+                    SharedConstants.serverFolder + "/tempWorld.zip",
+                    (err) => {
+                        if (err) return reject();
+                        resolve();
+                });
+            }
+
         });
     }
     /**
@@ -231,7 +256,7 @@ class ServerManager {
     async selectVersion(version) {
         this.version = version;
         this.state = ServerManager.States.DOWNLOADING_VERSION;
-        let versionData = this.vManager.selectVersion(version);
+        let versionData = await this.vManager.selectVersion(version);
         if (versionData == null) {
             await this.messageWorker.sendLogMessage(`Version "${version}" does not exist or invalid version id!`);
             return;
@@ -244,8 +269,6 @@ class ServerManager {
         this.state = "RP_SELECTION";
         if (isDownloaded) {
             await this.messageWorker.sendLogMessage("Server is downloaded!");
-        } else {
-            await this.messageWorker.sendLogMessage("Server already downloaded!");
         }
         if (!this.isCustomMap) {
             let resourcePack = this.mapManager.selectedMap.resourcePack;
@@ -268,24 +291,17 @@ class ServerManager {
         }
         switch (this.state) {
             case "WAITING":
-                let url = "";
+                let url;
                 this.state = ServerManager.States.DOWNLOADING_WORLD;
                 if (message.attachments == null || message.attachments.size !== 1) {
                     let writeUrl = message.content;
                     url = new URL(writeUrl);
-
-                    let matchUrl = writeUrl.match(/^https:\/\/.*$/);
-                    if (!matchUrl) {
-                        await this.messageWorker.sendLogMessage("Send your zip map file, or link for downloading map using https protocol!")
-                        return;
-                    }
-                    url = writeUrl;
                     await message.delete();
                 } else {
                     let attachments = message.attachments.first();
-                    url = attachments.url;
+                    url = new URL(attachments.url);
                 }
-                if (url.match(/^https:\/\/.*\.zip.*$/)) {
+                if ((url.protocol === "https:" || url.protocol === "http:")) {
                     await this.messageWorker.sendLogMessage("Please wait your world is downloading!");
                     await this.messageWorker.sendMainMessage("Downloading...")
                     await this.downloadWorldZip(url);
@@ -320,7 +336,6 @@ class ServerManager {
                     try {
                         await message.delete();
                     } catch (e) {
-
                     }
                     await this.messageWorker.sendLogMessage("You need send a map in ZIP format");
                     return;
@@ -357,12 +372,9 @@ class ServerManager {
             case "WAITING":
                 if (!(interaction instanceof SelectMenuInteraction)) return;
                 let alias = interaction.values[0];
-                try {
-                    await interaction.update({fetchReply: false, ...this.messageWorker.buildMainMessage()});
-                } catch (e) {}
-
                 this.state = ServerManager.States.DOWNLOADING_WORLD;
-                await this.messageWorker.sendMainMessage("Preparing map...");
+                await interaction.update({fetchReply: false, ...(await this.messageWorker.buildMainMessage("Preparing map..."))});
+
                 let mapFromEmoji = this.mapManager.getMapFromAlias(alias);
                 if (mapFromEmoji == null) {
                     Logger.warn("Map from emoji is null!")
@@ -370,7 +382,7 @@ class ServerManager {
                 }
                 this.initiator = interaction.member.user;
                 this.isCustomMap = false;
-                await this.downloadWorldZip(mapFromEmoji.url);
+                await this.downloadWorldZip(new URL(mapFromEmoji.url));
                 try {
                     await this.unpackWorld();
                 } catch (e) {
@@ -426,7 +438,7 @@ class ServerManager {
         }
     }
     async onConsoleMessage(chunk) {
-        process.stdout.write(chunk.toString());
+        process.stdout.write(chunk);
         let lines = chunk.toString().replace(/\n$/g,"");
         let line = lines.split("\n");
         for (let i = 0; i < line.length; i++) {
@@ -459,7 +471,7 @@ class ServerManager {
     async startServer() {
         this.state = "STARTING";
         await this.messageWorker.sendMainMessage();
-        await this.messageWorker.sendLogMessage("Starting server...");
+        //await this.messageWorker.sendLogMessage("Starting server...");
         Logger.log("Server is about to start!");
         await this.createServerProperties();
         this.serverProcess = await this.core.createServerProcess();
@@ -473,12 +485,14 @@ class ServerManager {
         this.serverProcess.on("error", console.error);
         this.serverProcess.on("exit",async (code, signal) => {
             //PROCESS CRASHED OR STOPPED;
-            console.log("Server is stopped! " + signal + " (" + code + ")");
-            await zip("./server/world/", "./world.zip");
+
+            Logger.log("Server is stopped! " + signal + " (" + code + ")");
+            this.messageWorker.sendLogMessage("Server is closed!");
+
             this.initiator = null;
-            if (config.generateDownloadLink) {
+            if (this.config.generateDownloadLink) {
+                await zip("./server/world/", "./world.zip");
                 await spawn('curl', ["--upload-file", "./world.zip", "https://transfer.sh/world.zip"], {cwd: "./"}).stdout.on("data", chunk => {
-                    this.messageWorker.sendLogMessage("Server is closed!");
                     this.state = ServerManager.States.WAITING;
                     this.messageWorker.sendMainMessage("[Download link](" + chunk.toString() + ")");
                     setTimeout(() => {

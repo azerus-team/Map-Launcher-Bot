@@ -70,10 +70,12 @@ class VersionManager {
         }
         return null;
     }
-    selectVersion(versionId) {
-        const selectedVersion = this.findVersion(versionId);
-        this.selectedVersion = selectedVersion;
-        return selectedVersion;
+    async selectVersion(versionId) {
+        if (versionId === "latest") {
+            versionId = await this.getLatestRelease();
+        }
+        this.selectedVersion = this.findVersion(versionId);
+        return this.selectedVersion;
     }
     getReleases() {
         if (this.jsonVanillaManifest == null) {
@@ -102,8 +104,8 @@ class VersionManager {
             .catch(e => console.error("Version Manifest is not updated!"));
         return mainReleases;
     }
-    getLatestRelease() {
-        return this?.jsonVanillaManifest?.["latest"]?.["release"];
+    async getLatestRelease() {
+        return (await this.serverManager.core.getReleases())[0];
     }
     getLatestSnapshot() {
         return this?.jsonVanillaManifest?.["latest"]?.["snapshot"];
@@ -149,12 +151,12 @@ class VersionManager {
         }
         return versionManifest["downloads"]["server"]["url"];
     }
-    async getLog4JFixFile() {
+    async hasLog4JFixFile() {
         let versionType = this.selectedVersion["type"];
         let version = this.selectedVersion["id"];
         if (versionType === "snapshot") {
             let releaseTime = new Date(this.selectedVersion["releaseTime"]);
-            if (releaseTime < new Date("2021-12-10T08:23:00+00:00")) {
+            if (releaseTime <= new Date("2021-12-10T08:23:00+00:00")) {
                 await this.serverManager.stopServer();
                 await this.serverManager.messageWorker.sendLogMessage("This version have Vulnerability see https://help.minecraft.net/hc/en-us/articles/4416199399693-Security-Vulnerability-in-Minecraft-Java-Edition");
             }//Before Release 1.18.1;

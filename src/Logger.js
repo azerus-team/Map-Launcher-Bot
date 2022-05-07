@@ -2,7 +2,14 @@
 
 class Logger {
     static prefix = (date) => {
-        return `[${(""+date.getDate()).padStart(2,"0")}.${((date.getMonth() + 1)+"").padStart(2, "0")}.${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}]`
+        return `[${(""+date.getDate()).padStart(2,"0")}` +
+        `.${((date.getMonth() + 1)+"").padStart(2, "0")}` +
+        `.${date.getFullYear()} ` +
+
+        `${(date.getHours()+"").padStart(2, "0")}` +
+        `:${(date.getMinutes()+"").padStart(2, "0")}]` +
+        `:${(date.getSeconds()+"").padStart(2, "0")}]`
+
     }
     static fatal(message) {
         let date = new Date();

@@ -1,3 +1,4 @@
+const Logger = require('./../Logger');
 
 class Map {
     /**
@@ -10,6 +11,7 @@ class Map {
     url;
     alias;
     emojiId;
+    emojiName;
     version;
     /**
      * @deprecated
@@ -26,6 +28,7 @@ class Map {
         this.alias = config["alias"];
         this.url = config["url"];
         this.emojiId = config["emojiId"];
+        this.emojiName = config["emojiName"];
         this.version = config["version"];
         this.resourcePack = config["resourcePack"]
         this.serverConfig = config["serverConfig"];
@@ -36,8 +39,16 @@ class Map {
         let alias = config["alias"];
         let url = config["url"];
         let emojiId = config["emojiId"];
+        let emojiName = config["emojiName"];
         let version = config["version"];
-        if (!(title && alias && url && emojiId && version)) return;
+        if (!(title && alias && url && (emojiId || emojiName) && version)) {
+            if (!title) return;
+            if (!alias) Logger.warn(`Alias is not provided for "${title}" in maps.json`);
+            if (!url) Logger.warn(`Url is not provided for "${title}" in maps.json`);
+            if (!emojiId && !emojiName) Logger.warn(`EmojiId or EmojiName is not provided for "${title}" in maps.json`);
+            if (!version) Logger.warn(`Version is not provided for "${title}" in maps.json`);
+            return null;
+        }
         return new Map(config);
     }
 

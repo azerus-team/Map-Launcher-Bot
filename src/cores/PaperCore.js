@@ -3,12 +3,15 @@ const fs = require("fs");
 const https = require("https");
 const miniget = require("miniget");
 const { spawn, spawnSync } = require("child_process");
-const config = require("../../Config");
+const Logger = require("../Logger");
+const SharedConstants = require("../SharedConstants");
 
 class PaperCore extends Core {
     static PAPER_MANIFEST = "https://papermc.io/api/v2/projects/paper"
     static BUILDS_MANIFEST = (MINECRAFT_VERSION) => `https://papermc.io/api/v2/projects/paper/versions/${MINECRAFT_VERSION}`
     static DOWNLOAD_LINK = (MINECRAFT_VERSION, BUILD_NUMBER) => `https://papermc.io/api/v2/projects/paper/versions/${MINECRAFT_VERSION}/builds/${BUILD_NUMBER}/downloads/paper-${MINECRAFT_VERSION}-${BUILD_NUMBER}.jar`
+
+    build;
 
     constructor(serverManager) {
         super(serverManager);
@@ -19,19 +22,17 @@ class PaperCore extends Core {
 
     async install() {
         return new Promise(async (resolve, reject) => {
-            if (fs.existsSync("./jars/Paper-" + this.serverManager.vManager.selectedVersion["id"] + ".jar")) {
-                resolve(false);
-                return;
-            }
-            await this.serverManager.messageWorker.sendLogMessage(`Downloading ${this.serverManager.vManager.selectedVersion["id"]}`);
             let downloadingLink = await this.getDownloadLink();
-            console.log(downloadingLink);
-            //let downloadingLink = await this.serverManager.vManager.getDownloadingLink();
             if (downloadingLink == null) {
                 reject("Link is empty");
                 return;
             }
-            let paper = fs.createWriteStream("./jars/Paper-" + this.serverManager.vManager.selectedVersion["id"] + ".jar");
+            if (fs.existsSync("./jars/Paper-" + this.serverManager.vManager.selectedVersion["id"] + "-" + this.build + ".jar")) {
+                resolve(false);
+                return;
+            }
+            await this.serverManager.messageWorker.sendLogMessage(`Downloading ${this.serverManager.vManager.selectedVersion["id"]}`);
+            let paper = fs.createWriteStream("./jars/Paper-" + this.serverManager.vManager.selectedVersion["id"] + "-" + this.build + ".jar");
             let minigetStream = miniget(downloadingLink);
             minigetStream.pipe(paper);
             paper.on("close", () => {
@@ -50,12 +51,16 @@ class PaperCore extends Core {
      */
     async getDownloadLink() {
         let selectedVersion = this.serverManager.vManager.selectedVersion["id"];
-        let buildManifest = await miniget(PaperCore.BUILDS_MANIFEST(selectedVersion)).text();
+        let buildManifest = await (miniget(PaperCore.BUILDS_MANIFEST(selectedVersion)).text());
         let buildManifestJson = JSON.parse(buildManifest);
-        if (buildManifestJson["error"]) return null
+        if (buildManifestJson["error"]) {
+            Logger.warn("Something went wrong while earning download link! Err: " + buildManifestJson["error"])
+            return;
+        }
         let builds = buildManifestJson["builds"];
         let latestBuildNumber = builds[builds.length - 1];
-        if (selectedVersion || latestBuildNumber) return null;
+        if (!selectedVersion || !latestBuildNumber) return null;
+        this.build = latestBuildNumber;
         return PaperCore.DOWNLOAD_LINK(selectedVersion, latestBuildNumber);
     }
 
@@ -64,7 +69,14 @@ class PaperCore extends Core {
      * @returns {Promise<ChildProcessWithoutNullStreams>}
      */
     async createServerProcess() {
-        return spawn('java', ['-jar', '-Xmx' + config.maxMemory, '-Xms' + config.initialMemory, '../jars/' + `Paper-${this.serverManager.vManager.selectedVersion["id"]}.jar`, 'nogui', '-Dlog4j2.formatMsgNoLookups=true', `${hasLog4JFixFile?"-Dlog4j.configurationFile=log4j_conf.xml":""}`], {cwd: "./server/"});
+        let args = ['-jar',
+            '-Xmx' + this.serverManager.config.maxMemory,
+            '-Xms' + this.serverManager.config.initialMemory,
+            `.${SharedConstants.jarsFolder}/Paper-${this.serverManager.vManager.selectedVersion["id"]}-${this.build}.jar`,
+            "nogui"
+        ];
+        Logger.log("Running with args: " + args.join(", "));
+        return spawn(this.serverManager.config.javaPath, args, {cwd: SharedConstants.serverFolder + '/'});
     }
     async getReleases() {
         //https://papermc.io/api/v2/projects/paper

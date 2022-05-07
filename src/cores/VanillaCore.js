@@ -3,9 +3,9 @@ const Core = require('./Core');
 const https = require("https");
 const ServerManager = require("../ServerManager");
 const {spawn} = require("child_process");
-const config = require("../../Config");
 const miniget = require('miniget');
 const Logger = require('./../Logger');
+const SharedConstants = require("./../SharedConstants");
 
 class VanillaCore extends Core {
     static VANILLA_VERSION_MANIFEST = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json";
@@ -50,11 +50,16 @@ class VanillaCore extends Core {
      * @returns {Promise<ChildProcessWithoutNullStreams>}
      */
     async createServerProcess() {
-        let hasLog4JFixFile = await this.serverManager.vManager.getLog4JFixFile();
-        let args = ['-jar', '-Xmx' + config.maxMemory, '-Xms' + config.initialMemory, '-Dlog4j2.formatMsgNoLookups=true', `../jars/Minecraft-${this.serverManager.vManager.selectedVersion["id"]}.jar`, 'nogui'];
+        let hasLog4JFixFile = await this.serverManager.vManager.hasLog4JFixFile();
+        let args = ['-jar',
+            '-Xmx' + this.serverManager.config.maxMemory,
+            '-Xms' + this.serverManager.config.initialMemory,
+            '-Dlog4j2.formatMsgNoLookups=true',
+            `../jars/Minecraft-${this.serverManager.vManager.selectedVersion["id"]}.jar`,
+            'nogui'];
         if (hasLog4JFixFile) args.push("-Dlog4j.configurationFile=log4j_conf.xml")
         Logger.log("Running with args: " + args.join(", "));
-        return spawn('java', args, {cwd: "./server/"});
+        return spawn(this.serverManager.config.javaPath, args, {cwd: SharedConstants.serverFolder});
     }
 
     /**
