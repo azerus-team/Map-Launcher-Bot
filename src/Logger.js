@@ -7,7 +7,7 @@ class Logger {
         `.${date.getFullYear()} ` +
 
         `${(date.getHours()+"").padStart(2, "0")}` +
-        `:${(date.getMinutes()+"").padStart(2, "0")}]` +
+        `:${(date.getMinutes()+"").padStart(2, "0")}` +
         `:${(date.getSeconds()+"").padStart(2, "0")}]`
 
     }

@@ -10,7 +10,7 @@
   "maxPlayers": 50,
   "generateDownloadLink": false,
   "idleTime": 15,
-  "eula": false,
+  "eula": true,
   "motd": "\\u00a76Your\\u00a77 map server\\u00a7r\\n\\u00a77Launched by\\u00a73 $INITIATOR\\u00a7r!",
   "message": {
     "title": "Map launcher bot",
