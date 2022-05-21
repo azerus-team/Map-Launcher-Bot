@@ -70,7 +70,7 @@ class FabricCore extends Core {
         let args = ['-jar',
             '-Xmx' + this.serverManager.config.maxMemory,
             '-Xms' + this.serverManager.config.initialMemory,
-            '-Dlog4j2.formatMsgNoLookups=true',
+            '-Dlog4j.formatMsgNoLookups=true',
             `fabric-server-launch.jar`,
             'nogui'];
         if (hasLog4JFixFile) args.push("-Dlog4j.configurationFile=log4j_conf.xml")

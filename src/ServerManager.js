@@ -240,8 +240,14 @@ class ServerManager {
                 .pipe(unzipper.Extract({ path: './server/tempWorld' }))
                 .on("close", () => {
                     let files = fs.readdirSync("./server/tempWorld/");
+                    Logger.debug("Files inside Archive: " + files.join(", "))
+                    if (files.indexOf("level.dat") !== -1) {
+                        fs.renameSync("./server/tempWorld/","./server/world");
+                        resolve();
+                        return;
+                    }
                     if (files.length > 1){
-                        reject("Archive have more than one folder inside!");
+                        reject("Archive have more than one folder inside or doesn't have level.dat in root!");
                     }
                     let file = files[0];
                     fs.renameSync("./server/tempWorld/" + file,"./server/world");
@@ -311,6 +317,7 @@ class ServerManager {
                     try {
                         await this.unpackWorld();
                     } catch (e) {
+                        Logger.warn("Unable to unpack world: " + e);
                         await this.stopServer();
                         return;
                     }
@@ -387,6 +394,7 @@ class ServerManager {
                     await this.unpackWorld();
                 } catch (e) {
                     await this.stopServer();
+                    Logger.warn("Unable to unpack world: " + e);
                     return;
                 }
                 if (mapFromEmoji.resourcePack) {

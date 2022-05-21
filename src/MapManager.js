@@ -3,6 +3,7 @@ const fs = require("fs");
 const Map = require("./model/Map");
 const {MessageSelectMenu} = require("discord.js");
 const Logger = require('./Logger');
+const SharedConstants = require('./SharedConstants');
 
 class MapManager {
     /**
@@ -17,7 +18,7 @@ class MapManager {
     constructor() {
         let maps = [];
         try {
-            let mapsFile = fs.readFileSync("maps.json");
+            let mapsFile = fs.readFileSync(SharedConstants.MapsFile);
             maps = JSON.parse(mapsFile.toString());
         } catch (e) {
             Logger.warn("Unable to parse maps.json!");

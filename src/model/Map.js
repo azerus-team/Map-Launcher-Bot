@@ -24,7 +24,7 @@ class Map {
         if (config == null) {
             console.error("config is null");
         }
-        this.title = config["title"];
+        this.title = `${config["title"]} [${config.version}]`;
         this.alias = config["alias"];
         this.url = config["url"];
         this.emojiId = config["emojiId"];

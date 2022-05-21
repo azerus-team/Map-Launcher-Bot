@@ -54,10 +54,10 @@ class VanillaCore extends Core {
         let args = ['-jar',
             '-Xmx' + this.serverManager.config.maxMemory,
             '-Xms' + this.serverManager.config.initialMemory,
-            '-Dlog4j2.formatMsgNoLookups=true',
             `../jars/Minecraft-${this.serverManager.vManager.selectedVersion["id"]}.jar`,
             'nogui'];
         if (hasLog4JFixFile) args.push("-Dlog4j.configurationFile=log4j_conf.xml")
+        args.push("-Dlog4j.formatMsgNoLookups=true")
         Logger.log("Running with args: " + args.join(", "));
         return spawn(this.serverManager.config.javaPath, args, {cwd: SharedConstants.serverFolder});
     }
