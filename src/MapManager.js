@@ -1,7 +1,6 @@
-const Discord = require("discord.js");
 const fs = require("fs");
 const Map = require("./model/Map");
-const {MessageSelectMenu} = require("discord.js");
+const { MessageSelectMenu } = require("discord.js");
 const Logger = require('./Logger');
 const SharedConstants = require('./SharedConstants');
 
@@ -51,13 +50,14 @@ class MapManager {
             .setCustomId("map_select")
             .setPlaceholder("Select map")
             .addOptions(this.maps.map(value => {
-                   return {
-                       "label": value.title,
-                       "value": value.alias,
-                       "emoji": {
-                           "id": value.emojiId,
-                           "name": value.emojiName
-                       }
+                return {
+                            "label": value.title,
+                            "value": value.alias,
+                            "description": "Version: " + value.version,
+                            "emoji": {
+                               "id": value.emojiId,
+                               "name": value.emojiName
+},
                    }
                 }));
     }

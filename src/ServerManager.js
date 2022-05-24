@@ -1,12 +1,10 @@
 const VersionManager = require("./VersionManager.js");
-const https = require("https");
-const http = require("http");
 const Discord = require("discord.js");
 const miniget = require("miniget");
 const path = require("path");
 const MapManager = require("./MapManager");
 const { zip } = require("zip-a-folder");
-const { spawn, spawnSync } = require("child_process");
+const { spawn } = require("child_process");
 const unzipper = require("unzipper");
 const MessageWorker = require("./MessageWorker");
 
@@ -17,13 +15,11 @@ const FabricCore = require("./cores/FabricCore");
 const SharedConstants = require('./SharedConstants');
 const config = require("./config/ConfigProperties");
 const fs = require("fs");
-const {TextChannel, Snowflake, SelectMenuInteraction, ButtonInteraction} = require("discord.js");
-const zlib = require("zlib");
+const {SelectMenuInteraction, ButtonInteraction} = require("discord.js");
 const { parse } = require('prismarine-nbt')
 const Logger = require('./Logger');
 
 class ServerManager {
-    static numericEmojis = ["0️⃣","1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟"]
     resourcePackLink = null;
     /**
      * @type {Discord.Message}
@@ -83,7 +79,6 @@ class ServerManager {
     /**
      *
      * @param {Discord.Client} client
-     * @param {VersionManager} vManager
      */
 
     constructor(client) {
@@ -91,7 +86,7 @@ class ServerManager {
         this.createFolder(SharedConstants.jarsFolder);
         this.createFolder(SharedConstants.serverFolder);
         this.createFolder(SharedConstants.mapsFolder);
-
+        this.createFolder(SharedConstants.logsFolder);
         switch (this.config.core) {
             case "PAPER":
                 this.core = new PaperCore(this);
@@ -111,11 +106,13 @@ class ServerManager {
         this.state = ServerManager.States.WAITING;
         this.players = [];
         if (this.resourcePackMessage != null) {
-            await this.resourcePackMessage.delete();
+            this.resourcePackMessage.delete().catch(e => {
+                Logger.warn("Unable to delete Message with Resourcepack attachment. Missing permission? " + e);
+            });
         }
         this.resourcePackMessage = null;
         this.vManager.selectedVersion = null;
-        await this.messageWorker.sendMainMessage();
+        this.messageWorker.sendMainMessage();
     }
     async onTick() {
         if (this.state === "HOSTING" && this.players.length === 0) {
@@ -193,7 +190,6 @@ class ServerManager {
         fs.rmSync(SharedConstants.serverFolder + "/world",{recursive:true, force: true});
         fs.rmSync(SharedConstants.serverFolder + "/world_nether",{recursive:true, force: true});
         fs.rmSync(SharedConstants.serverFolder + "/world_the_end",{recursive:true, force: true});
-        fs.rmSync(SharedConstants.serverFolder + "/logs",{recursive:true, force: true});
         fs.rmSync(SharedConstants.serverFolder + "/tempWorld",{recursive:true, force: true});
         fs.rmSync(SharedConstants.serverFolder + "/tempWorld.zip",{recursive:true, force: true});
         fs.rmSync(SharedConstants.serverFolder + "/cache",{recursive:true, force: true});
@@ -205,15 +201,14 @@ class ServerManager {
                     resolve();
                 });
                 writeStream.on("error", async (err) => {
-                    console.error(err);
-                    await this.messageWorker.sendLogMessage("I can't download map using this link!");
-                    reject();
+                    this.messageWorker.sendLogMessage("I can't download map using this link!")
+                    Logger.warn("Unable to download world: " + err);
                 });
             }
             if (link.protocol === "file:" && link.pathname === "/") {
                 if (this.isCustomMap) {
                     reject();
-                    await this.messageWorker.sendLogMessage("File is not safety!");
+                    this.messageWorker.sendLogMessage("File is not safety!");
                 }
                 let src = path.join(SharedConstants.mapsFolder, link.hostname);
                 fs.copyFile(
@@ -238,7 +233,7 @@ class ServerManager {
         return new Promise((resolve, reject) => {
             fs.createReadStream('./server/tempWorld.zip')
                 .pipe(unzipper.Extract({ path: './server/tempWorld' }))
-                .on("close", () => {
+                .on("close", async () => {
                     let files = fs.readdirSync("./server/tempWorld/");
                     Logger.debug("Files inside Archive: " + files.join(", "))
                     if (files.indexOf("level.dat") !== -1) {
@@ -247,6 +242,7 @@ class ServerManager {
                         return;
                     }
                     if (files.length > 1){
+                        this.messageWorker.sendLogMessage("Archive have more than one folder inside or doesn't have level.dat in root!");
                         reject("Archive have more than one folder inside or doesn't have level.dat in root!");
                     }
                     let file = files[0];
@@ -254,8 +250,8 @@ class ServerManager {
                     resolve();
                 })
                 .on("error", async (err) => {
-                    await this.messageWorker.sendLogMessage("The archive is corrupted or not available!");
-                    reject("Bad Archive");
+                    this.messageWorker.sendLogMessage("The archive is corrupted or not available!");
+                    reject(err);
                 });
         });
     }
@@ -264,26 +260,24 @@ class ServerManager {
         this.state = ServerManager.States.DOWNLOADING_VERSION;
         let versionData = await this.vManager.selectVersion(version);
         if (versionData == null) {
-            await this.messageWorker.sendLogMessage(`Version "${version}" does not exist or invalid version id!`);
+            this.messageWorker.sendLogMessage(`Version "${version}" does not exist or invalid version id!`);
             return;
         }
         //console.log(`Download JAR file for ${this.vManager.selectedVersion["type"]} ${this.version}`);
         if (this.isCustomMap) {
-            await this.messageWorker.sendMainMessage("Select one of version below OR write special version");
+            this.messageWorker.sendMainMessage("Select one of version below OR write special version");
         }
         let isDownloaded = await this.downloadJarIfNotExist();
         this.state = "RP_SELECTION";
         if (isDownloaded) {
-            await this.messageWorker.sendLogMessage("Server is downloaded!");
+            this.messageWorker.sendLogMessage("Server is downloaded!")
         }
         if (!this.isCustomMap) {
             let resourcePack = this.mapManager.selectedMap.resourcePack;
             this.setResourcePack(resourcePack);
             await this.startServer()
-            return;
-        }
-        if (this.isCustomMap) {
-            await this.messageWorker.sendMainMessage("Send resource pack or click ❌ reaction");
+        } else {
+            this.messageWorker.sendMainMessage("Send resource pack or click ❌ reaction");
         }
     }
     /**
@@ -301,26 +295,29 @@ class ServerManager {
                 this.state = ServerManager.States.DOWNLOADING_WORLD;
                 if (message.attachments == null || message.attachments.size !== 1) {
                     let writeUrl = message.content;
-                    url = new URL(writeUrl);
                     await message.delete();
+                    try {
+                        url = new URL(writeUrl);
+                    } catch (e) {
+                        this.messageWorker.sendLogMessage("Link is not valid!");
+                        await this.stopServer();
+                        return
+                    }
                 } else {
                     let attachments = message.attachments.first();
                     url = new URL(attachments.url);
                 }
                 if ((url.protocol === "https:" || url.protocol === "http:")) {
-                    await this.messageWorker.sendLogMessage("Please wait your world is downloading!");
-                    await this.messageWorker.sendMainMessage("Downloading...")
+                    this.messageWorker.sendLogMessage("Please wait your world is downloading!");
+                    this.messageWorker.sendMainMessage("Downloading...")
                     await this.downloadWorldZip(url);
-                    if (!message.deleted) {
-                        await message.delete();
-                    }
-                    try {
-                        await this.unpackWorld();
-                    } catch (e) {
-                        Logger.warn("Unable to unpack world: " + e);
-                        await this.stopServer();
-                        return;
-                    }
+                    message.delete().catch(e => {
+                        Logger.warn("Unable to delete user Message. Missing permission? " + e);
+                    });
+                    await this.unpackWorld().catch(err => {
+                        Logger.warn("Unable to unpack world: " + err);
+                        this.stopServer();
+                    });
                     let data;
                     let version = null;
                     try {
@@ -331,31 +328,32 @@ class ServerManager {
                     }
                     this.isCustomMap = true;
                     this.initiator = message.author;
-                    if (version === this.getVersionManager().getLatestRelease() ||
+                    if (version === (await this.getVersionManager().getLatestRelease()) ||
                         version === this.getVersionManager().getLatestSnapshot()) {
-                        await this.messageWorker.sendLogMessage(`Latest version ${version} auto detected from level.dat file!`);
+                        this.messageWorker.sendLogMessage(`Latest version ${version} auto detected from level.dat file!`);
                         await this.selectVersion(version);
                     } else {
                         this.state = "V_SELECTION";
-                        await this.messageWorker.sendMainMessage(`Map is loaded in ${version} which is not latest or unusual. Select version or write that you need!`);
+                        this.messageWorker.sendMainMessage(`Map is loaded in ${version} which is not latest or unusual. Select version or write that you need!`);
                     }
                 } else {
-                    try {
-                        await message.delete();
-                    } catch (e) {
-                    }
-                    await this.messageWorker.sendLogMessage("You need send a map in ZIP format");
+                    message.delete().catch(e => {
+                        Logger.warn("Unable to delete message: " + e);
+                    });
+                    this.messageWorker.sendLogMessage("You need send a map in ZIP format");
                     return;
                 }
                 break;
             case "V_SELECTION":
                 let version = message.content;
-                await message.delete();
+                message.delete().catch(e => {
+                    Logger.warn("Unable to delete message: " + e);
+                });
                 await this.selectVersion(version);
                 break;
             case "RP_SELECTION":
                 if (message.attachments == null || message.attachments.size !== 1) {
-                    await this.messageWorker.sendLogMessage("You need send message with Attachment in ZIP format");
+                    this.messageWorker.sendLogMessage("You need send message with Attachment in ZIP format");
                     this.resourcePackMessage = message;
                     this.setResourcePack(message.content);
                     await this.startServer()
@@ -378,10 +376,14 @@ class ServerManager {
         switch (this.state) {
             case "WAITING":
                 if (!(interaction instanceof SelectMenuInteraction)) return;
+                Logger.log(`${interaction.user.username} (${interaction.user.id}) starting predefined map!`)
                 let alias = interaction.values[0];
                 this.state = ServerManager.States.DOWNLOADING_WORLD;
-                await interaction.update({fetchReply: false, ...(await this.messageWorker.buildMainMessage("Preparing map..."))});
-
+                interaction.update({fetchReply: false,
+                    ...(await this.messageWorker.buildMainMessage("Preparing map..."))}
+                ).catch(e => {
+                    Logger.warn("Unable to update interaction message!" + e);
+                });
                 let mapFromEmoji = this.mapManager.getMapFromAlias(alias);
                 if (mapFromEmoji == null) {
                     Logger.warn("Map from emoji is null!")
@@ -403,9 +405,6 @@ class ServerManager {
                     await this.setResourcePack(null);
                 }
                 await this.selectVersion(mapFromEmoji.version)
-                // await this.messageWorker.sendMainMessage();
-                // this.state = "STARTING";
-                // await this.mainMessage.edit(ServerManager.basicMessageCreator("🔵 Selecting version", mes, this.initiator, messageComponent));
                 break;
             case "V_SELECTION":
                 if (!(interaction instanceof SelectMenuInteraction)) return;
@@ -423,16 +422,23 @@ class ServerManager {
                 }
                 break;
             case "STARTING":
-                if (!(interaction instanceof ButtonInteraction)) return;
-                if (interaction.member.user !== this.initiator) return;
-                if (interaction.customId === "stop_server") {
-                    interaction.update({fetchReply: false});
-                    this.serverProcess.kill("SIGKILL");
-                }
-                break;
+                // if (!(interaction instanceof ButtonInteraction)) return;
+                // if (interaction.member.user !== this.initiator &&                                   //check that initiator made action
+                //     !interaction.channel.permissionsFor(interaction.member).has("MANAGE_CHANNELS")  //check that user have manage channel perms
+                // ) return;
+                // if (interaction.customId === "stop_server") {
+                //     interaction.update({fetchReply: false});
+                //     this.serverProcess.kill("SIGKILL");
+                // }
+                // break;
             case "HOSTING":
                 if (!(interaction instanceof ButtonInteraction)) return;
-                if (interaction.member.user !== this.initiator) return;
+                if (interaction.channel.permissionsFor(interaction.member).has("MANAGE_CHANNELS")) {
+                    Logger.debug("User have Manage Channels perms!")
+                }
+                if (interaction.member.user !== this.initiator &&                                   //check that initiator made action
+                    !interaction.channel.permissionsFor(interaction.member).has("MANAGE_CHANNELS")  //check that user have manage channel perms
+                ) return;
                 if (interaction.customId === "stop_server") {
                     this.serverProcess.stdin.write(`kick @a ${this.initiator.username} closed the server!\n`);
                     setTimeout(() => {
@@ -455,8 +461,8 @@ class ServerManager {
             started = started ?? oneLine.match(/\[\d\d:\d\d:\d\d INFO]: Done \((.*)\)! For help, type "help"/);
             if (started) {
                 this.state = "HOSTING";
-                await this.messageWorker.sendLogMessage(`Server is started in ${started[1]}`);
-                await this.messageWorker.sendMainMessage("To close server click 🛑");
+                this.messageWorker.sendLogMessage(`Server is started in ${started[1]}`);
+                this.messageWorker.sendMainMessage("To close server click 🛑");
             }
             let joined = oneLine.match(/\[\d\d:\d\d:\d\d] \[.*\/.*]: ([a-zA-Z_0-9]*)\[\/.*] logged in with entity id \d* at \(.*,.*,.*\)/);
             joined = joined ?? oneLine.match(/\[\d\d:\d\d:\d\d INFO]: ([a-zA-Z_0-9]*)\[\/.*] logged in with entity id \d* at \(.*,.*,.*\)/);
@@ -464,7 +470,7 @@ class ServerManager {
                 let username = joined[1];
                 this.players.push(username);
                 console.log(this.players);
-                await this.messageWorker.sendLogMessage(`${username} joined the game!`);
+                this.messageWorker.sendLogMessage(`${username} joined the game!`);
             }
             let left = oneLine.match(/\[\d\d:\d\d:\d\d] \[.*\/.*]: ([a-zA-Z_0-9]*) lost connection: .*/);
             left = left ?? oneLine.match(/\[\d\d:\d\d:\d\d INFO]: ([a-zA-Z_0-9]*) lost connection: .*/);
@@ -472,14 +478,14 @@ class ServerManager {
                 let username = left[1];
                 this.players.splice(this.players.indexOf(username), 1);
                 console.log(this.players);
-                await this.messageWorker.sendLogMessage(`${username} left the game!`);
+                this.messageWorker.sendLogMessage(`${username} left the game!`);
             }
         }
     }
     async startServer() {
         this.state = "STARTING";
-        await this.messageWorker.sendMainMessage();
-        //await this.messageWorker.sendLogMessage("Starting server...");
+        this.messageWorker.sendMainMessage()
+        //this.messageWorker.sendLogMessage("Starting server...");
         Logger.log("Server is about to start!");
         await this.createServerProperties();
         this.serverProcess = await this.core.createServerProcess();
@@ -495,8 +501,7 @@ class ServerManager {
             //PROCESS CRASHED OR STOPPED;
 
             Logger.log("Server is stopped! " + signal + " (" + code + ")");
-            this.messageWorker.sendLogMessage("Server is closed!");
-
+            this.messageWorker.sendLogMessage("Server is closed!")
             this.initiator = null;
             if (this.config.generateDownloadLink) {
                 await zip("./server/world/", "./world.zip");

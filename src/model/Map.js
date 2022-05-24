@@ -13,10 +13,6 @@ class Map {
     emojiId;
     emojiName;
     version;
-    /**
-     * @deprecated
-     */
-    discordEmoji;
     resourcePack;
     serverConfig;
 
@@ -24,7 +20,7 @@ class Map {
         if (config == null) {
             console.error("config is null");
         }
-        this.title = `${config["title"]} [${config.version}]`;
+        this.title = config["title"];
         this.alias = config["alias"];
         this.url = config["url"];
         this.emojiId = config["emojiId"];

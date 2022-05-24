@@ -10,7 +10,10 @@ const SharedConstants = require("./../SharedConstants");
 class VanillaCore extends Core {
     static VANILLA_VERSION_MANIFEST = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json";
 
-
+    /**
+     *
+     * @param {ServerManager} serverManager
+     */
     constructor(serverManager) {
         super(serverManager);
     }
@@ -38,7 +41,7 @@ class VanillaCore extends Core {
                     resolve(true);
                 })
                 res.on("error", (err) => {
-                    console.error(err);
+                    Logger.warn("Something went wrong while downloading Minecraft Vanilla: " + err);
                     reject(err);
                 })
             });
@@ -54,10 +57,10 @@ class VanillaCore extends Core {
         let args = ['-jar',
             '-Xmx' + this.serverManager.config.maxMemory,
             '-Xms' + this.serverManager.config.initialMemory,
+            '-Dlog4j.formatMsgNoLookups=true',
             `../jars/Minecraft-${this.serverManager.vManager.selectedVersion["id"]}.jar`,
             'nogui'];
-        if (hasLog4JFixFile) args.push("-Dlog4j.configurationFile=log4j_conf.xml")
-        args.push("-Dlog4j.formatMsgNoLookups=true")
+        if (hasLog4JFixFile) args.push("-Dlog4j.configurationFile=log4j_conf.xml");
         Logger.log("Running with args: " + args.join(", "));
         return spawn(this.serverManager.config.javaPath, args, {cwd: SharedConstants.serverFolder});
     }

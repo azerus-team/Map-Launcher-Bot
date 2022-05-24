@@ -1,22 +1,22 @@
 {
-  "channelId": "573137370044694539",
-  "botToken": "<Bot token is here or use process.env>",
-  "javaPath": "java",
-  "core": "VANILLA | PAPER | FABRIC",
-  "port": 25565,
-  "initialMemory": "1G",
-  "maxMemory": "4G",
-  "onlineMode": true,
-  "maxPlayers": 50,
-  "generateDownloadLink": false,
-  "idleTime": 15,
-  "eula": false,
-  "motd": "\\u00a76Your\\u00a77 map server\\u00a7r\\n\\u00a77Launched by\\u00a73 $INITIATOR\\u00a7r!",
-  "message": {
-    "title": "Map launcher bot",
-    "ip": "join.here.com",
-    "footer": "Made by Azerus Team (Sirboys)",
-    "description": "Using this bot you can launch your map. Just send your map using `.zip` archive.",
-    "sideColor": 43775
-  }
+	"message": {
+		"title": "Map launcher bot",
+		"ip": "join.here.com",
+		"footer": "Made by Azerus Team (Sirboys)",
+		"description": "Using this bot you can launch your map. Just send your map using `.zip` archive.",
+		"sideColor": 43775
+	},
+	"channelId": "573137370044694539",
+	"botToken": "<Bot token is here or use process.env>",
+	"javaPath": "java",
+	"core": "VANILLA | PAPER | FABRIC",
+	"port": 25565,
+	"initialMemory": "1G",
+	"maxMemory": "4G",
+	"onlineMode": true,
+	"maxPlayers": 50,
+	"generateDownloadLink": false,
+	"eula": false,
+	"motd": "\\u00a76Your\\u00a77 map server\\u00a7r\\n\\u00a77Launched by\\u00a73 $INITIATOR\\u00a7r!",
+	"idleTime": 15
 }

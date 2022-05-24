@@ -22,9 +22,6 @@ client.on("messageCreate", (message) => {
     sManager.onMessageReceive(message);
 });
 client.on("interactionCreate", interation => {
-    if (interation.type !== "MESSAGE_COMPONENT") {
-        return;
-    }
     if (!(interation instanceof MessageComponentInteraction)) return;
     if (!(interation.channel instanceof TextChannel)) return;
     if (interation.channel.id !== sManager.config.channelId) {
@@ -38,5 +35,5 @@ if (sManager.config.botToken === "<Bot token is here or use process.env>") {
     Logger.fatal("Set bot token in config.json and restart app!");
 }
 client.login(sManager.config.botToken).catch(e => {
-    Logger.fatal("Bot token in invalid. Set token in config.json and restart app!");
+    Logger.fatal("Bot token in invalid. Set token in config.json and restart app!" + e);
 });

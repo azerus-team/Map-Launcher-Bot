@@ -10,7 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "discord.js": "13.3.1",
+    "discord.js": "13.7.0",
     "miniget": "^4.2.2",
     "prismarine-nbt": "^2.0.0",
     "unzipper": "^0.10.11",

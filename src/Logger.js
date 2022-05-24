@@ -1,4 +1,5 @@
-
+const fs = require('fs');
+const SharedConstants = require('./SharedConstants');
 
 class Logger {
     static prefix = (date) => {
@@ -14,24 +15,39 @@ class Logger {
     static fatal(message) {
         let date = new Date();
         let prefix = Logger.prefix(date) + " [FATAL] ";
-        console.error(prefix + message);
+        let out = prefix + message;
+        Logger.writeToFile(out);
+        console.error(out);
         process.exit(0);
     }
     static log(message) {
         let date = new Date();
         let prefix = Logger.prefix(date) + " [LOG] ";
-        console.log(prefix + message);
+        let out = prefix + message;
+        Logger.writeToFile(out);
+        console.log(out);
     }
     static debug(message) {
         if (!process.env.DEBUG) return;
         let date = new Date();
         let prefix = Logger.prefix(date) + " [DEBUG] ";
-        console.log(prefix + message);
+        let out = prefix + message;
+        Logger.writeToFile(out);
+        console.log(out);
     }
     static warn(message) {
         let date = new Date();
         let prefix = Logger.prefix(date) + " [WARN] ";
-        console.log(prefix + message);
+        let out = prefix + message;
+        Logger.writeToFile(out);
+        console.log(out);
+    }
+    static writeToFile(message) {
+        let date = new Date();
+        let fileName =`${(""+date.getDate()).padStart(2,"0")}` +
+            `-${((date.getMonth() + 1)+"").padStart(2, "0")}` +
+            `-${date.getFullYear()}.log`
+        fs.appendFile(SharedConstants.logsFolder + "/" + fileName, message + "\n", () => {})
     }
 }
 module.exports = Logger;

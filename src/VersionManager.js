@@ -4,6 +4,7 @@ const ServerManager = require("./ServerManager");
 const miniget = require('miniget');
 const fs = require('fs');
 const SharedConstants = require("./SharedConstants");
+const Logger = require("./Logger");
 
 class VersionManager {
 
@@ -28,9 +29,10 @@ class VersionManager {
     selectedVersion = null;
     constructor(serverManager) {
         this.serverManager = serverManager;
-        this.loadManifest(VersionManager.VANILLA_VERSION_MANIFEST);
+        this.loadManifest(VersionManager.VANILLA_VERSION_MANIFEST).catch(e => {
+            Logger.fatal("Something went wrong while load version manifest (Mojang servers is down?): " + e)
+        });
     }
-
     async loadManifest(link) {
         return new Promise((resolve, reject) => {
             https.get(link, res => {
@@ -77,33 +79,6 @@ class VersionManager {
         this.selectedVersion = this.findVersion(versionId);
         return this.selectedVersion;
     }
-    getReleases() {
-        if (this.jsonVanillaManifest == null) {
-            return null;
-        }
-        /**
-         *
-         * @type {Object}
-         */
-        let mainReleases = {};
-        let versions = this.jsonVanillaManifest["versions"];
-        for (let i = 0; i < versions.length; i++) {
-            const ver = versions[i];
-            if (ver["type"] !== "release") continue;
-            let matches = ver["id"].match(/^(\d\.\d*)(\.\d*|)$/m);
-            let mainVersion = matches[1];
-            if (!mainReleases.hasOwnProperty(mainVersion)) {
-                mainReleases[mainVersion] = ver;
-            }
-            if (Object.keys(mainReleases).length >= 11) {
-                break;
-            }
-        }
-        this.loadManifest()
-            .then(r => console.log("Version Manifest is updated"))
-            .catch(e => console.error("Version Manifest is not updated!"));
-        return mainReleases;
-    }
     async getLatestRelease() {
         return (await this.serverManager.core.getReleases())[0];
     }
@@ -140,7 +115,6 @@ class VersionManager {
 
     /**
      *
-     * @param {String} versionUrl
      * @returns {String|null}
      */
     async getDownloadingLink() {

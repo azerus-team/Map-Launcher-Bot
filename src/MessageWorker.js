@@ -1,11 +1,11 @@
 const Discord = require('discord.js');
 const fs = require("fs");
-const {TextChannel, MessagePayload, RichPresenceAssets, MessageEmbed, MessageComponentInteraction, MessageSelectMenu,
-    InteractionCollector, MessageActionRow, MessageButton, Message
+const {TextChannel, MessageEmbed, MessageActionRow, MessageButton
 } = require("discord.js");
 const MapManager = require("./MapManager");
 const ServerManager = require("./ServerManager");
 const SharedConstants = require('./SharedConstants');
+const Logger = require('./Logger');
 
 class MessageWorker {
     /**
@@ -77,78 +77,85 @@ class MessageWorker {
         await this.sendLogMessage("Bot is started!");
         fs.writeFileSync(SharedConstants.MessageFile, JSON.stringify({"MAIN": this.mainMessage.id, "LOG": this.logMessage.id}));
     }
-    async sendMainMessage(content = "Nothing") {
-        await this.mainMessage.edit(await this.buildMainMessage(content));
+    sendMainMessage(content = "Nothing") {
+        this.buildMainMessage(content).then(_ => {
+            this.mainMessage.edit(_)
+                .catch(e => {
+                Logger.warn("Unable to update main message: " + e);
+            });
+        })
+
     }
     /**
      *
      * @param {String} content
-     * @returns {Promise<void>}
+     * @returns {void}
      */
-    async sendLogMessage(content) {
-        await this.logMessage.edit("> " + content);
+    sendLogMessage(content) {
+        this.logMessage.edit("> " + content)
+            .catch(e => {
+                Logger.warn("Unable to update log message: " + e);
+            });
     }
-    /**
-     *
-     * @returns {Discord.MessageEditOptions}
-     */
     async buildMainMessage(content = "Nothing") {
-        let initiator = this.serverManager.initiator;
-        let row = new MessageActionRow();
-        let addComponent = true;
-        switch (this.serverManager.state) {
-            case "WAITING":
-                let components = this.mapManager.buildMapSelector();
-                if (components == null) {
+        return new Promise((resolve) => {
+            let initiator = this.serverManager.initiator;
+            let row = new MessageActionRow();
+            let addComponent = true;
+            switch (this.serverManager.state) {
+                case "WAITING":
+                    let components = this.mapManager.buildMapSelector();
+                    if (components == null) {
+                        addComponent = false;
+                        break;
+                    }
+                    row.addComponents(components);
+                    break;
+                case "V_SELECTION":
+                    row.addComponents(this.serverManager.getVersionManager().getMessageComponent());
+                    break;
+                case "W_DOWNLOADING":
+                case "V_DOWNLOADING":
                     addComponent = false;
                     break;
-                }
-                row.addComponents(components);
-                break;
-            case "V_SELECTION":
-                row.addComponents(await this.serverManager.getVersionManager().getMessageComponent());
-                break;
-            case "W_DOWNLOADING":
-            case "V_DOWNLOADING":
-                addComponent = false;
-                break;
-            case "RP_SELECTION":
-                let noRpButton = new MessageButton()
-                    .setCustomId("no_rp")
-                    .setEmoji("❌")
-                    .setStyle("PRIMARY")
-                    .setLabel("No resourcepack");
-                row.addComponents(noRpButton)
-                break;
-            case "STARTING":
-            case "HOSTING":
-                let stopServerButton = new MessageButton()
-                    .setCustomId("stop_server")
-                    .setEmoji("🛑")
-                    .setStyle("DANGER")
-                    .setLabel("Stop server");
-                row.addComponents(stopServerButton)
-                break;
-        }
-        let messageConfig = this.serverManager.config.message;
-        let embed = new MessageEmbed()
-            .setTitle(messageConfig.title)
-            .setDescription(messageConfig.description)
-            .setColor(messageConfig.sideColor)
-            .setFooter(messageConfig.footer)
+                case "RP_SELECTION":
+                    let noRpButton = new MessageButton()
+                        .setCustomId("no_rp")
+                        .setEmoji("❌")
+                        .setStyle("PRIMARY")
+                        .setLabel("No resourcepack");
+                    row.addComponents(noRpButton)
+                    break;
+                case "STARTING":
+                case "HOSTING":
+                    let stopServerButton = new MessageButton()
+                        .setCustomId("stop_server")
+                        .setEmoji("🛑")
+                        .setStyle("DANGER")
+                        .setLabel("Stop server");
+                    row.addComponents(stopServerButton)
+                    break;
+            }
+            let messageConfig = this.serverManager.config.message;
+            let embed = new MessageEmbed()
+                .setTitle(messageConfig.title)
+                .setDescription(messageConfig.description)
+                .setColor(messageConfig.sideColor)
+                .setFooter({
+                    "text": messageConfig.footer
+                })
+                .addField("Status", MessageWorker.resolveStatus(this.serverManager.state), true)
+                .addField("Initiator", initiator ? `<@!${initiator.id}>` : "N/A", true)
+                .addField("IP", "`" + messageConfig.ip + "`", true)
+                .addField("Version", `\`${(this?.serverManager?.vManager?.selectedVersion?.id ?? "N/A")}\``, true)
+                .addField("Message", content, false)
 
-            .addField("Status", MessageWorker.resolveStatus(this.serverManager.state), true)
-            .addField("Initiator", initiator ? `<@!${initiator.id}>` : "N/A", true)
-            .addField("IP", "`" + messageConfig.ip + "`", true)
-            .addField("Version", `\`${(this?.serverManager?.vManager?.selectedVersion?.id ?? "N/A")}\``, true)
-            .addField("Message", content, false)
-
-        if (addComponent) {
-            return {content: " ", embeds: [embed], components: [row]};
-        } else {
-            return {content: " ", embeds: [embed], components: []};
-        }
-
+            if (addComponent) {
+                resolve({content: " ", embeds: [embed], components: [row]});
+            } else {
+                resolve({content: " ", embeds: [embed], components: []});
+            }
+        })
     }
 
     static resolveStatus(state) {

@@ -50,5 +50,6 @@ class MessageConfig {
         }
         return new MessageConfig(title, ip, footer, description, sideColor);
     }
+
 }
 module.exports = MessageConfig;
