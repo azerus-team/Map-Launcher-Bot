@@ -35,7 +35,11 @@ class ConfigProperties {
     /**
      * @type {number}
      */
-    maxPlayers
+    maxPlayers;
+    /**
+     * @type {boolean}
+     */
+    useNativeTransport;
     /**
      * @type {boolean}
      */
@@ -65,6 +69,7 @@ class ConfigProperties {
                 maxMemory,
                 onlineMode,
                 maxPlayers,
+                useNativeTransport,
                 generateDownloadLink,
                 eula,
                 idleTime,
@@ -80,6 +85,7 @@ class ConfigProperties {
         this.maxMemory = maxMemory;
         this.onlineMode = onlineMode;
         this.maxPlayers = maxPlayers;
+        this.useNativeTransport = useNativeTransport;
         this.generateDownloadLink = generateDownloadLink;
         this.eula = eula;
         this.idleTime = idleTime;
@@ -118,6 +124,7 @@ class ConfigProperties {
         }
         let initialMemory = ConfigProperties.setDefaultAndGet(jsonConfig, "initialMemory", "1G");
         let maxMemory = ConfigProperties.setDefaultAndGet(jsonConfig, "maxMemory", "4G");
+        let useNativeTransport = ConfigProperties.setDefaultAndGet(jsonConfig, "useNativeTransport", true);
         let onlineMode = ConfigProperties.setDefaultAndGet(jsonConfig, "onlineMode", true);
         if (typeof onlineMode != "boolean") {
             Logger.fatal("Unable to parse Online Mode. It should be boolean")
@@ -140,7 +147,7 @@ class ConfigProperties {
         let idleTime = ConfigProperties.setDefaultAndGet(jsonConfig, "idleTime", 15);
         let message = MessageConfig.handle(jsonConfig);
         fs.writeFileSync(SharedConstants.ConfigFile, JSON.stringify(jsonConfig, null, '\t'));
-        return new ConfigProperties(channelId, botToken, javaPath, core, port, initialMemory, maxMemory, onlineMode, maxPlayers, generateDownloadLink, eula, idleTime, f_motd, message);
+        return new ConfigProperties(channelId, botToken, javaPath, core, port, initialMemory, maxMemory, onlineMode, maxPlayers, useNativeTransport, generateDownloadLink, eula, idleTime, f_motd, message);
     }
     static setDefaultAndGet(config, key, defaultValue) {
         let tmp = config[key];

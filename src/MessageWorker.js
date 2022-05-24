@@ -98,7 +98,7 @@ class MessageWorker {
             });
     }
     async buildMainMessage(content = "Nothing") {
-        return new Promise((resolve) => {
+        return new Promise(async (resolve) => {
             let initiator = this.serverManager.initiator;
             let row = new MessageActionRow();
             let addComponent = true;
@@ -112,7 +112,7 @@ class MessageWorker {
                     row.addComponents(components);
                     break;
                 case "V_SELECTION":
-                    row.addComponents(this.serverManager.getVersionManager().getMessageComponent());
+                    row.addComponents(await this.serverManager.getVersionManager().getMessageComponent());
                     break;
                 case "W_DOWNLOADING":
                 case "V_DOWNLOADING":

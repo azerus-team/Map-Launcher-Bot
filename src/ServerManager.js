@@ -55,14 +55,6 @@ class ServerManager {
      */
     vManager = new VersionManager(this);
     /**
-     * @type {Discord.Message}
-     */
-    //mainMessage;
-    /**
-     * @type {Discord.Message}
-     */
-    //logMessage;
-    /**
      *
      * @type {Discord.User}
      */
@@ -158,6 +150,7 @@ class ServerManager {
             `online-mode=${this.config.onlineMode}\n` +
             `op-permission-level=2\n` +
             `level-name=world\n` +
+            `use-native-transport=${this.config.useNativeTransport}\n` +
             `allow-flight=${serverProperties["allow-flight"] ?? true}\n` +
             `player-idle-timeout=${serverProperties["player-idle-timeout"] ?? 15}\n` +
             `motd=${this.config.motd(this.initiator.username)}\n`;
