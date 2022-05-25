@@ -103,11 +103,12 @@ class ConfigProperties {
             let file = fs.readFileSync(SharedConstants.ConfigFile);
             jsonConfig = JSON.parse(file);
         } catch (e) {
-            Logger.fatal("Unable to parse config file")
+            Logger.warn("Config file is not found. Creating a new one! Please review config.json and start bot again!");
         }
+
         let channelId = ConfigProperties.setDefaultAndGet(jsonConfig, "channelId", "<SET HERE CHANNEL ID>")
         let botToken = process.env["DISCORD_TOKEN"] || jsonConfig["botToken"];
-        ConfigProperties.setDefaultAndGet(jsonConfig, "botToken", "<SET HERE CHANNEL ID>")
+        ConfigProperties.setDefaultAndGet(jsonConfig, "botToken", "<SET HERE BOT TOKEN>")
         let javaPath = ConfigProperties.setDefaultAndGet(jsonConfig, "javaPath", "java")
         let core = ConfigProperties.setDefaultAndGet(jsonConfig, "core", "VANILLA | PAPER | FABRIC");
         if (core !== "VANILLA" && core !== "PAPER" && core !== "FABRIC") {
@@ -136,9 +137,7 @@ class ConfigProperties {
             Logger.fatal("Unable to parse Generate Download Link. It should be boolean")
         }
         let eula = ConfigProperties.setDefaultAndGet(jsonConfig, "eula", false);
-        if (!eula) {
-            Logger.fatal("You should accept Minecraft EULA to use this bot, change option in config.json. https://www.minecraft.net/eula")
-        }
+
         let motd = ConfigProperties.setDefaultAndGet(jsonConfig, "motd", "\\u00a76Your\\u00a77 map server\\u00a7r\\n\\u00a77Launched by\\u00a73 $INITIATOR\\u00a7r!");
         let f_motd = (initiator) => {
             let motdSplited = motd.split("$INITIATOR");
@@ -146,21 +145,32 @@ class ConfigProperties {
         }
         let idleTime = ConfigProperties.setDefaultAndGet(jsonConfig, "idleTime", 15);
         let message = MessageConfig.handle(jsonConfig);
+        let msg = ConfigProperties.setDefaultAndGet(jsonConfig, "message", message);
         fs.writeFileSync(SharedConstants.ConfigFile, JSON.stringify(jsonConfig, null, '\t'));
-        return new ConfigProperties(channelId, botToken, javaPath, core, port, initialMemory, maxMemory, onlineMode, maxPlayers, useNativeTransport, generateDownloadLink, eula, idleTime, f_motd, message);
+        if (!eula) {
+            Logger.fatal("You should accept Minecraft EULA to use this bot, change option in config.json. More info: https://www.minecraft.net/eula")
+        }
+        return new ConfigProperties(channelId,
+            botToken,
+            javaPath,
+            core,
+            port,
+            initialMemory,
+            maxMemory,
+            onlineMode,
+            maxPlayers,
+            useNativeTransport,
+            generateDownloadLink,
+            eula,
+            idleTime,
+            f_motd,
+            msg);
     }
     static setDefaultAndGet(config, key, defaultValue) {
         let tmp = config[key];
         delete config[key];
         config[key] = tmp ?? defaultValue;
-        // config = Object.keys(config).sort().reduce(
-        //     (obj, key) => {
-        //         obj[key] = config[key];
-        //         return obj;
-        //     },
-        //     {}
-        // );
-
+        fs.writeFileSync(SharedConstants.ConfigFile, JSON.stringify(config, null, '\t')); //TODO tmp fix for empty config
         return config[key];
     }
 }

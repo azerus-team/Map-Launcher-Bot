@@ -94,7 +94,7 @@ class ServerManager {
     createFolder(path) {
         if (!fs.existsSync(path)) fs.mkdirSync(path);
     }
-    async stopServer() {
+    stopServer() {
         this.state = ServerManager.States.WAITING;
         this.players = [];
         if (this.resourcePackMessage != null) {
@@ -115,12 +115,12 @@ class ServerManager {
         } else if (this.state === "V_SELECTION") {
             this.idleTime++;
             if (this.idleTime > 20 * 60 * 3) { // 3 minutes
-                await this.stopServer();
+                this.stopServer()
             }
         } else if (this.state === "RP_SELECTION") {
             this.idleTime++;
             if (this.idleTime > 20 * 60 * 3) { // 3 minutes
-                await this.stopServer()
+                this.stopServer()
             }
         } else {
             this.idleTime = 0;
@@ -293,7 +293,7 @@ class ServerManager {
                         url = new URL(writeUrl);
                     } catch (e) {
                         this.messageWorker.sendLogMessage("Link is not valid!");
-                        await this.stopServer();
+                        this.stopServer()
                         return
                     }
                 } else {
@@ -388,7 +388,7 @@ class ServerManager {
                 try {
                     await this.unpackWorld();
                 } catch (e) {
-                    await this.stopServer();
+                    this.stopServer()
                     Logger.warn("Unable to unpack world: " + e);
                     return;
                 }
@@ -427,7 +427,7 @@ class ServerManager {
             case "HOSTING":
                 if (!(interaction instanceof ButtonInteraction)) return;
                 if (interaction.channel.permissionsFor(interaction.member).has("MANAGE_CHANNELS")) {
-                    Logger.debug("User have Manage Channels perms!")
+                    Logger.debug(`${interaction.user.username} (${interaction.user.id}) force stopped server!`);
                 }
                 if (interaction.member.user !== this.initiator &&                                   //check that initiator made action
                     !interaction.channel.permissionsFor(interaction.member).has("MANAGE_CHANNELS")  //check that user have manage channel perms
@@ -508,7 +508,7 @@ class ServerManager {
                     }, 20000);
                 });
             }
-            await this.stopServer();
+            this.stopServer()
         })
     }
     static States = {

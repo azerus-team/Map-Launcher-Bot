@@ -18,8 +18,9 @@ client.on("messageCreate", (message) => {
     const channel = sManager.config.channelId;
     if (message.channel.id !== channel) return;
     if (message.author.bot) return;
-    // noinspection JSIgnoredPromiseFromCall
-    sManager.onMessageReceive(message);
+    sManager.onMessageReceive(message).catch(e => {
+        Logger.warn("Something went wrong while handling Message Receive. " + e);
+    });
 });
 client.on("interactionCreate", interation => {
     if (!(interation instanceof MessageComponentInteraction)) return;

@@ -38,15 +38,16 @@ class MessageConfig {
     static handle(config) {
         let messageNode = config["message"];
         if (!messageNode) {
-            Logger.fatal("Message node is not defined!")
+            Logger.warn("Message configs is not defined!");
+            messageNode = {}
         }
         let title = messageNode["title"] || "Map launcher bot";
-        let ip = messageNode["ip"];
+        let ip = messageNode["ip"] || "join.here.com";
         let footer = messageNode["footer"] || "Made with <3";
         let description = messageNode["description"] || "Using this bot you can launch your map. Just send your map using `.zip` archive.";
         let sideColor = messageNode["sideColor"] || 43775;
         if (!ip || isNaN(sideColor)) {
-            Logger.fatal("IP or SideColor is not defined in message node!")
+            Logger.warn("Message Configs: IP or SideColor is not defined in message node!")
         }
         return new MessageConfig(title, ip, footer, description, sideColor);
     }
