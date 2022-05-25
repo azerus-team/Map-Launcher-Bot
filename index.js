@@ -10,7 +10,6 @@ client.on("ready", () => {
     Logger.log("Map Testing bot started");
     sManager = new ServerManager(client);
     setInterval(() => {
-        // noinspection JSIgnoredPromiseFromCall
         sManager.onTick();
     }, 1000 / 20);
 });

@@ -106,7 +106,7 @@ class ServerManager {
         this.vManager.selectedVersion = null;
         this.messageWorker.sendMainMessage();
     }
-    async onTick() {
+    onTick() {
         if (this.state === "HOSTING" && this.players.length === 0) {
             this.idleTime++;
             if (this.idleTime > 20 * 60 * this.config.idleTime) { //10 minutes by Default
@@ -427,7 +427,7 @@ class ServerManager {
             case "HOSTING":
                 if (!(interaction instanceof ButtonInteraction)) return;
                 if (interaction.channel.permissionsFor(interaction.member).has("MANAGE_CHANNELS")) {
-                    Logger.debug(`${interaction.user.username} (${interaction.user.id}) force stopped server!`);
+                    Logger.log(`${interaction.user.username} (${interaction.user.id}) force stopped server!`);
                 }
                 if (interaction.member.user !== this.initiator &&                                   //check that initiator made action
                     !interaction.channel.permissionsFor(interaction.member).has("MANAGE_CHANNELS")  //check that user have manage channel perms
