@@ -67,6 +67,10 @@ class ServerManager {
      * @type {Core}
      */
     core;
+    /**
+     *
+     * @type {ConfigProperties}
+     */
     config = config.handle();
     /**
      *
@@ -137,42 +141,33 @@ class ServerManager {
         this.resourcePackLink = link;
     }
     createServerProperties() {
-        let serverProperties = {}
+        let defaultServerProperties = this.config.serverConfig.serverProperties || {}
+        let mapServerProperties = {}
         if (!this.isCustomMap) {
-            serverProperties = this.mapManager.selectedMap["serverConfig"]?.["server.properties"] ?? {};
+            mapServerProperties = this.mapManager.selectedMap["serverConfig"]?.["server.properties"] ?? {};
         }
-        let props = `server-port=${this.config.port}\n` +
-            `spawn-protection=${serverProperties["spawn-protection"] ?? '0'}\n` +
-            `gamemode=${serverProperties["gamemode"] ?? 'survival'}\n` +
-            `resource-pack=${this.resourcePackLink ?? ""}\n` +
-            `enable-command-block=${serverProperties["enable-command-block"] ?? true}\n` +
-            `max-players=${serverProperties["max-players"] ?? this.config.maxPlayers}\n` +
-            `online-mode=${this.config.onlineMode}\n` +
-            `op-permission-level=2\n` +
-            `level-name=world\n` +
-            `use-native-transport=${this.config.useNativeTransport}\n` +
-            `allow-flight=${serverProperties["allow-flight"] ?? true}\n` +
-            `player-idle-timeout=${serverProperties["player-idle-timeout"] ?? 15}\n` +
-            `motd=${this.config.motd(this.initiator.username)}\n`;
-        for (let key in serverProperties) {
-            if (key === "spawn-protection" ||
-                key === "gamemode" ||
-                key === "enable-command-block" ||
-                key === "max-players" ||
-                key === "allow-flight" ||
-                key === "player-idle-timeout" ||
-                key === "server-port" ||
-                key === "resource-pack" ||
-                key === "online-mode" ||
-                key === "op-permission-level" ||
-                key === "level-name" ||
-                key === "motd"
-            ) continue;
-            props += key + "=" + serverProperties[key] + "\n";
+        let serverProps = this.combineProps(defaultServerProperties, mapServerProperties);
+        let props = "";
+        for (let key in serverProps) {
+            props += key + "=" + serverProps[key] + "\n";
         }
-        fs.writeFileSync(SharedConstants.serverFolder + "/server.properties",
-            props , "utf8");
+        fs.writeFileSync(SharedConstants.serverFolder + "/server.properties", props , "utf8");
         fs.writeFileSync(SharedConstants.serverFolder + "/eula.txt", "eula=" + this.config.eula);
+    }
+
+    /**
+     *
+     * @param {Object} defaultProps
+     * @param {Object} mapProps
+     */
+    combineProps(defaultProps, mapProps) {
+        let hardProps = {
+            "motd": `${this.config.motd(this.initiator.username)}`,
+            "resource-pack": this.resourcePackLink ?? "",
+            "level-name": "world",
+            "server-port": this.config.port,
+        }
+        return {...defaultProps, ...mapProps, ...hardProps};
     }
     /**
      *

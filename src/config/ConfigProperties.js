@@ -1,6 +1,7 @@
 const SharedConstants = require('./../SharedConstants');
 const fs = require("fs");
 const MessageConfig = require('./MessageConfig');
+const ServerConfig = require('./ServerConfig');
 const Logger = require('../Logger');
 
 class ConfigProperties {
@@ -60,6 +61,10 @@ class ConfigProperties {
      * @type {MessageConfig}
      */
     message;
+    /**
+     * @type {ServerConfig}
+     */
+    serverConfig;
     constructor(channelId,
                 botToken,
                 javaPath,
@@ -74,7 +79,8 @@ class ConfigProperties {
                 eula,
                 idleTime,
                 motd,
-                message
+                message,
+                serverConfig
     ) {
         this.channelId = channelId;
         this.botToken = botToken;
@@ -91,6 +97,7 @@ class ConfigProperties {
         this.idleTime = idleTime;
         this.motd = motd;
         this.message = message;
+        this.serverConfig = serverConfig;
     }
 
     /**
@@ -146,6 +153,8 @@ class ConfigProperties {
         let idleTime = ConfigProperties.setDefaultAndGet(jsonConfig, "idleTime", 15);
         let message = MessageConfig.handle(jsonConfig);
         let msg = ConfigProperties.setDefaultAndGet(jsonConfig, "message", message);
+        let serverConfig = ServerConfig.handle(jsonConfig);
+        let srvConfig = ConfigProperties.setDefaultAndGet(jsonConfig, "serverConfig", serverConfig);
         fs.writeFileSync(SharedConstants.ConfigFile, JSON.stringify(jsonConfig, null, '\t'));
         if (!eula) {
             Logger.fatal("You should accept Minecraft EULA to use this bot, change option in config.json. More info: https://www.minecraft.net/eula")
@@ -164,7 +173,8 @@ class ConfigProperties {
             eula,
             idleTime,
             f_motd,
-            msg);
+            msg,
+            srvConfig);
     }
     static setDefaultAndGet(config, key, defaultValue) {
         let tmp = config[key];

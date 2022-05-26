@@ -44,7 +44,7 @@ class MessageWorker {
         this.mapManager = mapManager;
         this.serverManager = serverManager;
         this.fetchMessages().catch(err => {
-            console.error("Something went wrong file fetch messages! Err: " + err);
+            Logger.fatal("Something went wrong while fetch messages! Check config.json and grant SendMessages, ManageMessages permissions. " + err);
         });
     }
 
@@ -69,7 +69,7 @@ class MessageWorker {
             this.mainMessage = await this.channel.messages.fetch(msID["MAIN"].toString());
             this.logMessage = await this.channel.messages.fetch(msID["LOG"].toString());
         } catch (e) {
-            console.log("Unable to find messages in channel!");
+            Logger.log("Unable to find messages in channel. Sending a new one.")
         }
         this.mainMessage = this.mainMessage ?? await this.channel.send(await this.buildMainMessage());
         this.logMessage = this.logMessage ?? await this.channel.send("> Bot is started!");
