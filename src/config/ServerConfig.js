@@ -11,7 +11,7 @@ class ServerConfig {
      * @returns {ServerConfig}
      */
     static handle(config) {
-        config = config["serverConfig"];
+        config = config["serverConfig"] || {};
         let serverProperties = config["serverProperties"] || {};
         let maxPlayers = parseInt(ServerConfig.setDefaultAndGet(serverProperties, "max-players", 50));
         if (isNaN(maxPlayers) || maxPlayers < 1) {
