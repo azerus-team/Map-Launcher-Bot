@@ -231,7 +231,6 @@ class ServerManager {
                     }
                     if (files.length > 1){
                         this.messageWorker.sendLogMessage("Archive have more than one folder inside or doesn't have level.dat in root!");
-                        this.stopServer();
                         reject("Archive have more than one folder inside or doesn't have level.dat in root!");
                         return;
                     }
@@ -305,30 +304,33 @@ class ServerManager {
                     message.delete().catch(e => {
                         Logger.warn("Unable to delete user Message. Missing permission? " + e);
                     });
-                    this.unpackWorld().catch(err => {
-                        Logger.warn("Unable to unpack world: " + err);
-                        this.messageWorker.sendLogMessage("Archive have wrong format!");
-                        this.stopServer();
-                    }).then(async _ => {
-                        let data;
-                        let version = null;
-                        try {
-                            data = fs.readFileSync("./server/world/level.dat");
-                            const { parsed } = await parse(data)
-                            version = parsed?.value?.["Data"]?.value["Version"]?.value["Name"]?.value;
-                        } catch (e) {
-                        }
-                        this.isCustomMap = true;
-                        this.initiator = message.author;
-                        if (version === (await this.getVersionManager().getLatestRelease()) ||
-                            version === this.getVersionManager().getLatestSnapshot()) {
-                            this.messageWorker.sendLogMessage(`Latest version ${version} auto detected from level.dat file!`);
-                            await this.selectVersion(version);
-                        } else {
-                            this.state = "V_SELECTION";
-                            this.messageWorker.sendMainMessage(`Map is loaded in ${version} which is not latest or unusual. Select version or write that you need!`);
-                        }
-                    });
+                    try {
+                        await this.unpackWorld();
+                    } catch (e) {
+                        this.stopServer()
+                        Logger.warn("Unable to unpack world: " + e);
+                        this.messageWorker.sendLogMessage("Something went wrong while unpacking the world! Check console for more information");
+                        return;
+                    }
+
+                    let data;
+                    let version = null;
+                    try {
+                        data = fs.readFileSync("./server/world/level.dat");
+                        const { parsed } = await parse(data)
+                        version = parsed?.value?.["Data"]?.value["Version"]?.value["Name"]?.value;
+                    } catch (e) {
+                    }
+                    this.isCustomMap = true;
+                    this.initiator = message.author;
+                    if (version === (await this.getVersionManager().getLatestRelease()) ||
+                        version === this.getVersionManager().getLatestSnapshot()) {
+                        this.messageWorker.sendLogMessage(`Latest version ${version} auto detected from level.dat file!`);
+                        await this.selectVersion(version);
+                    } else {
+                        this.state = "V_SELECTION";
+                        this.messageWorker.sendMainMessage(`Map is loaded in ${version} which is not latest or unusual. Select version or write that you need!`);
+                    }
                 } else {
                     message.delete().catch(e => {
                         Logger.warn("Unable to delete message: " + e);
