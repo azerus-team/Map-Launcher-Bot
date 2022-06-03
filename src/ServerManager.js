@@ -231,7 +231,9 @@ class ServerManager {
                     }
                     if (files.length > 1){
                         this.messageWorker.sendLogMessage("Archive have more than one folder inside or doesn't have level.dat in root!");
+                        this.stopServer();
                         reject("Archive have more than one folder inside or doesn't have level.dat in root!");
+                        return;
                     }
                     let file = files[0];
                     fs.renameSync("./server/tempWorld/" + file,"./server/world");
