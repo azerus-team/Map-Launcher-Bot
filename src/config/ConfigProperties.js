@@ -16,6 +16,10 @@ class ConfigProperties {
     /**
      * @type {String}
      */
+    language;
+    /**
+     * @type {String}
+     */
     core;
     /**
      * @type {number}
@@ -29,18 +33,6 @@ class ConfigProperties {
      * @type {maxMemory}
      */
     maxMemory;
-    /**
-     * @type {boolean}
-     */
-    onlineMode;
-    /**
-     * @type {number}
-     */
-    maxPlayers;
-    /**
-     * @type {boolean}
-     */
-    useNativeTransport;
     /**
      * @type {boolean}
      */
@@ -72,9 +64,6 @@ class ConfigProperties {
                 port,
                 initialMemory,
                 maxMemory,
-                onlineMode,
-                maxPlayers,
-                useNativeTransport,
                 generateDownloadLink,
                 eula,
                 idleTime,
@@ -89,9 +78,6 @@ class ConfigProperties {
         this.port = port;
         this.initialMemory = initialMemory;
         this.maxMemory = maxMemory;
-        this.onlineMode = onlineMode;
-        this.maxPlayers = maxPlayers;
-        this.useNativeTransport = useNativeTransport;
         this.generateDownloadLink = generateDownloadLink;
         this.eula = eula;
         this.idleTime = idleTime;
@@ -106,11 +92,17 @@ class ConfigProperties {
      */
     static handle() {
         let jsonConfig = {};
+        let file;
         try {
-            let file = fs.readFileSync(SharedConstants.ConfigFile);
+            file = fs.readFileSync(SharedConstants.ConfigFile, "utf8");
+        } catch (e) {
+            Logger.warn("Config file not found creating a new one");
+        }
+        try {
             jsonConfig = JSON.parse(file);
         } catch (e) {
-            Logger.warn("Config file is not found. Creating a new one! Please review config.json and start bot again!");
+            Logger.fatal("Config file have syntax error. " + e);
+            return;
         }
 
         let channelId = ConfigProperties.setDefaultAndGet(jsonConfig, "channelId", "<SET HERE CHANNEL ID>")
@@ -132,13 +124,6 @@ class ConfigProperties {
         }
         let initialMemory = ConfigProperties.setDefaultAndGet(jsonConfig, "initialMemory", "1G");
         let maxMemory = ConfigProperties.setDefaultAndGet(jsonConfig, "maxMemory", "4G");
-        let useNativeTransport = ConfigProperties.setDefaultAndGet(jsonConfig, "useNativeTransport", true);
-        let onlineMode = ConfigProperties.setDefaultAndGet(jsonConfig, "onlineMode", true);
-        if (typeof onlineMode != "boolean") {
-            Logger.fatal("Unable to parse Online Mode. It should be boolean")
-        }
-        let maxPlayers = parseInt(ConfigProperties.setDefaultAndGet(jsonConfig, "maxPlayers", 50));
-        if (isNaN(maxPlayers)) maxPlayers = 50;
         let generateDownloadLink = ConfigProperties.setDefaultAndGet(jsonConfig, "generateDownloadLink", false);
         if (typeof generateDownloadLink != "boolean") {
             Logger.fatal("Unable to parse Generate Download Link. It should be boolean")
@@ -166,9 +151,6 @@ class ConfigProperties {
             port,
             initialMemory,
             maxMemory,
-            onlineMode,
-            maxPlayers,
-            useNativeTransport,
             generateDownloadLink,
             eula,
             idleTime,

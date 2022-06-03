@@ -1,6 +1,6 @@
 const Discord = require('discord.js');
 const fs = require("fs");
-const {TextChannel, MessageEmbed, MessageActionRow, MessageButton
+const {TextChannel, MessageEmbed, MessageActionRow, MessageButton, ButtonInteraction
 } = require("discord.js");
 const MapManager = require("./MapManager");
 const ServerManager = require("./ServerManager");
@@ -101,6 +101,7 @@ class MessageWorker {
         return new Promise(async (resolve) => {
             let initiator = this.serverManager.initiator;
             let row = new MessageActionRow();
+            //let secondayRow = new MessageActionRow();
             let addComponent = true;
             switch (this.serverManager.state) {
                 case "WAITING":
@@ -109,6 +110,7 @@ class MessageWorker {
                         addComponent = false;
                         break;
                     }
+
                     row.addComponents(components);
                     break;
                 case "V_SELECTION":

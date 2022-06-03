@@ -239,6 +239,7 @@ class ServerManager {
                 })
                 .on("error", async (err) => {
                     this.messageWorker.sendLogMessage("The archive is corrupted or not available!");
+                    this.stopServer();
                     reject(err);
                 });
         });
@@ -289,7 +290,7 @@ class ServerManager {
                     } catch (e) {
                         this.messageWorker.sendLogMessage("Link is not valid!");
                         this.stopServer()
-                        return
+                        return;
                     }
                 } else {
                     let attachments = message.attachments.first();
@@ -302,28 +303,30 @@ class ServerManager {
                     message.delete().catch(e => {
                         Logger.warn("Unable to delete user Message. Missing permission? " + e);
                     });
-                    await this.unpackWorld().catch(err => {
+                    this.unpackWorld().catch(err => {
                         Logger.warn("Unable to unpack world: " + err);
+                        this.messageWorker.sendLogMessage("Archive have wrong format!");
                         this.stopServer();
+                    }).then(async _ => {
+                        let data;
+                        let version = null;
+                        try {
+                            data = fs.readFileSync("./server/world/level.dat");
+                            const { parsed } = await parse(data)
+                            version = parsed?.value?.["Data"]?.value["Version"]?.value["Name"]?.value;
+                        } catch (e) {
+                        }
+                        this.isCustomMap = true;
+                        this.initiator = message.author;
+                        if (version === (await this.getVersionManager().getLatestRelease()) ||
+                            version === this.getVersionManager().getLatestSnapshot()) {
+                            this.messageWorker.sendLogMessage(`Latest version ${version} auto detected from level.dat file!`);
+                            await this.selectVersion(version);
+                        } else {
+                            this.state = "V_SELECTION";
+                            this.messageWorker.sendMainMessage(`Map is loaded in ${version} which is not latest or unusual. Select version or write that you need!`);
+                        }
                     });
-                    let data;
-                    let version = null;
-                    try {
-                        data = fs.readFileSync("./server/world/level.dat");
-                        const { parsed } = await parse(data)
-                        version = parsed?.value?.["Data"]?.value["Version"]?.value["Name"]?.value;
-                    } catch (e) {
-                    }
-                    this.isCustomMap = true;
-                    this.initiator = message.author;
-                    if (version === (await this.getVersionManager().getLatestRelease()) ||
-                        version === this.getVersionManager().getLatestSnapshot()) {
-                        this.messageWorker.sendLogMessage(`Latest version ${version} auto detected from level.dat file!`);
-                        await this.selectVersion(version);
-                    } else {
-                        this.state = "V_SELECTION";
-                        this.messageWorker.sendMainMessage(`Map is loaded in ${version} which is not latest or unusual. Select version or write that you need!`);
-                    }
                 } else {
                     message.delete().catch(e => {
                         Logger.warn("Unable to delete message: " + e);
@@ -385,6 +388,7 @@ class ServerManager {
                 } catch (e) {
                     this.stopServer()
                     Logger.warn("Unable to unpack world: " + e);
+                    this.messageWorker.sendLogMessage("Something went wrong while unpacking the world! Check console for more information");
                     return;
                 }
                 if (mapFromEmoji.resourcePack) {
@@ -397,28 +401,28 @@ class ServerManager {
             case "V_SELECTION":
                 if (!(interaction instanceof SelectMenuInteraction)) return;
                 if (interaction.member.user !== this.initiator) return;
-                interaction.update({fetchReply: true});
-                await this.selectVersion(interaction.values[0])
+                interaction.update({fetchReply: true}).then(async _ => {
+                    await this.selectVersion(interaction.values[0])
+                }).catch(async err => {
+                    Logger.warn("Something went wrong while update interaction. " + err);
+                    await this.selectVersion(interaction.values[0])
+                });
                 break;
             case "RP_SELECTION":
                 if (!(interaction instanceof ButtonInteraction)) return;
                 if (interaction.member.user !== this.initiator) return;
                 if (interaction.customId === "no_rp") {
-                    interaction.update({fetchReply: true});
-                    this.setResourcePack(null);
-                    await this.startServer();
+                    await interaction.update({fetchReply: true}).then(async _ => {
+                        this.setResourcePack(null);
+                        await this.startServer();
+                    }).catch(async err => {
+                        Logger.warn("Something went wrong while update interaction. " + err);
+                        this.setResourcePack(null);
+                        await this.startServer();
+                    });
                 }
                 break;
             case "STARTING":
-                // if (!(interaction instanceof ButtonInteraction)) return;
-                // if (interaction.member.user !== this.initiator &&                                   //check that initiator made action
-                //     !interaction.channel.permissionsFor(interaction.member).has("MANAGE_CHANNELS")  //check that user have manage channel perms
-                // ) return;
-                // if (interaction.customId === "stop_server") {
-                //     interaction.update({fetchReply: false});
-                //     this.serverProcess.kill("SIGKILL");
-                // }
-                // break;
             case "HOSTING":
                 if (!(interaction instanceof ButtonInteraction)) return;
                 if (interaction.channel.permissionsFor(interaction.member).has("MANAGE_CHANNELS")) {
@@ -428,11 +432,15 @@ class ServerManager {
                     !interaction.channel.permissionsFor(interaction.member).has("MANAGE_CHANNELS")  //check that user have manage channel perms
                 ) return;
                 if (interaction.customId === "stop_server") {
+                    try {
+                        await interaction.update({fetchReply: false});
+                    } catch (e) {
+                        Logger.warn("Something went wrong while update interaction. " + e);
+                    }
                     this.serverProcess.stdin.write(`kick @a ${this.initiator.username} closed the server!\n`);
                     setTimeout(() => {
                         this.serverProcess.kill("SIGKILL");
                     }, 50);
-                    interaction.update({fetchReply: false});
                 }
                 break;
             default:
@@ -452,16 +460,16 @@ class ServerManager {
                 this.messageWorker.sendLogMessage(`Server is started in ${started[1]}`);
                 this.messageWorker.sendMainMessage("To close server click 🛑");
             }
-            let joined = oneLine.match(/\[\d\d:\d\d:\d\d] \[.*\/.*]: ([a-zA-Z_0-9]*)\[\/.*] logged in with entity id \d* at \(.*,.*,.*\)/);
-            joined = joined ?? oneLine.match(/\[\d\d:\d\d:\d\d INFO]: ([a-zA-Z_0-9]*)\[\/.*] logged in with entity id \d* at \(.*,.*,.*\)/);
+            let joined = oneLine.match(/\[\d\d:\d\d:\d\d] \[.*\/.*]: (\w*)\[\/.*] logged in with entity id \d* at \(.*,.*,.*\)/);
+            joined = joined ?? oneLine.match(/\[\d\d:\d\d:\d\d INFO]: (\w*)\[\/.*] logged in with entity id \d* at \(.*,.*,.*\)/);
             if (joined) {
                 let username = joined[1];
                 this.players.push(username);
                 console.log(this.players);
                 this.messageWorker.sendLogMessage(`${username} joined the game!`);
             }
-            let left = oneLine.match(/\[\d\d:\d\d:\d\d] \[.*\/.*]: ([a-zA-Z_0-9]*) lost connection: .*/);
-            left = left ?? oneLine.match(/\[\d\d:\d\d:\d\d INFO]: ([a-zA-Z_0-9]*) lost connection: .*/);
+            let left = oneLine.match(/\[\d\d:\d\d:\d\d] \[.*\/.*]: (\w*) lost connection: .*/);
+            left = left ?? oneLine.match(/\[\d\d:\d\d:\d\d INFO]: (\w*) lost connection: .*/);
             if (left) {
                 let username = left[1];
                 this.players.splice(this.players.indexOf(username), 1);
@@ -487,7 +495,6 @@ class ServerManager {
         this.serverProcess.on("error", console.error);
         this.serverProcess.on("exit",async (code, signal) => {
             //PROCESS CRASHED OR STOPPED;
-
             Logger.log("Server is stopped! " + signal + " (" + code + ")");
             this.messageWorker.sendLogMessage("Server is closed!")
             this.initiator = null;
