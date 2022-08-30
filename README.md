@@ -17,4 +17,4 @@ To run bot run
 node index.js
 ```
 
-After first run you need to configure `config.json` file
+After first run you need to configure `config.json` file and run again
