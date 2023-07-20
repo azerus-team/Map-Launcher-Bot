@@ -59,6 +59,7 @@ class ConfigProperties {
     serverConfig;
     constructor(channelId,
                 botToken,
+                language,
                 javaPath,
                 core,
                 port,
@@ -73,6 +74,7 @@ class ConfigProperties {
     ) {
         this.channelId = channelId;
         this.botToken = botToken;
+        this.language = language;
         this.javaPath = javaPath;
         this.core = core;
         this.port = port;
@@ -108,6 +110,7 @@ class ConfigProperties {
         let channelId = ConfigProperties.setDefaultAndGet(jsonConfig, "channelId", "<SET HERE CHANNEL ID>")
         let botToken = process.env["DISCORD_TOKEN"] || jsonConfig["botToken"];
         ConfigProperties.setDefaultAndGet(jsonConfig, "botToken", "<SET HERE BOT TOKEN>")
+        let language = ConfigProperties.setDefaultAndGet(jsonConfig, "language", "en_US");
         let javaPath = ConfigProperties.setDefaultAndGet(jsonConfig, "javaPath", "java")
         let core = ConfigProperties.setDefaultAndGet(jsonConfig, "core", "VANILLA | PAPER | FABRIC");
         if (core !== "VANILLA" && core !== "PAPER" && core !== "FABRIC") {
@@ -146,6 +149,7 @@ class ConfigProperties {
         }
         return new ConfigProperties(channelId,
             botToken,
+            language,
             javaPath,
             core,
             port,

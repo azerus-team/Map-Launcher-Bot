@@ -1,6 +1,6 @@
 const fs = require("fs");
 const Map = require("./model/Map");
-const { MessageSelectMenu } = require("discord.js");
+const { MessageSelectMenu, SelectMenuBuilder} = require("discord.js");
 const Logger = require('./Logger');
 const SharedConstants = require('./SharedConstants');
 
@@ -44,7 +44,7 @@ class MapManager {
      */
     buildMapSelector() {
         if (this.maps.length === 0) return null
-        return new MessageSelectMenu()
+        return new SelectMenuBuilder()
             .setMaxValues(1)
             .setMinValues(1)
             .setCustomId("map_select")

@@ -1,0 +1,5 @@
+{
+  "test.key": "Hello, World!",
+  "test.key.placeholder": "Hello, %s!",
+  "error.unableDownloadVersion": "Unable to download server with provided version."
+}

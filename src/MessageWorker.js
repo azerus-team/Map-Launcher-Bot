@@ -1,11 +1,14 @@
 const Discord = require('discord.js');
 const fs = require("fs");
-const {TextChannel, MessageEmbed, MessageActionRow, MessageButton, ButtonInteraction
+const {TextChannel, MessageEmbed, MessageActionRow, MessageButton, ButtonInteraction, ActionRowBuilder, EmbedBuilder,
+    ButtonBuilder
 } = require("discord.js");
 const MapManager = require("./MapManager");
 const ServerManager = require("./ServerManager");
 const SharedConstants = require('./SharedConstants');
 const Logger = require('./Logger');
+const path = require("path");
+const { I18n } = require("i18n");
 
 class MessageWorker {
     /**
@@ -32,7 +35,17 @@ class MessageWorker {
      * @type {ServerManager}
      */
     serverManager;
-
+    /**
+     *
+     * @type {I18n}
+     */
+    i18n = new I18n({
+        locales: ['en_US', 'ru_RU'],
+        directory: path.join(__dirname, 'locales'),
+        defaultLocale: "en_US",
+        retryInDefaultLocale: true,
+        updateFiles: false,
+    });
     /**
      *
      * @param {Discord.Client} client
@@ -44,10 +57,10 @@ class MessageWorker {
         this.mapManager = mapManager;
         this.serverManager = serverManager;
         this.fetchMessages().catch(err => {
-            Logger.fatal("Something went wrong while fetch messages! Check config.json and grant SendMessages, ManageMessages permissions. " + err);
+            console.log(err);
+            Logger.fatal("Something went wrong while fetch messages! Check config.json and grant SendMessages, ManageMessages permissions.");
         });
     }
-
     /**
      *
      * @returns {Promise<void>}
@@ -58,11 +71,13 @@ class MessageWorker {
             let msFile = fs.readFileSync(SharedConstants.MessageFile).toString();
             msID = JSON.parse(msFile);
         } catch (e) {
+            console.error(e);
         }
         /**
          *
          * @type {TextChannel}
          */
+        console.log(this.client.isReady());
         this.channel = await this.client.channels.fetch(this.serverManager.config.channelId);
         if (!(this.channel instanceof TextChannel)) return;
         try {
@@ -77,6 +92,12 @@ class MessageWorker {
         await this.sendLogMessage("Bot is started!");
         fs.writeFileSync(SharedConstants.MessageFile, JSON.stringify({"MAIN": this.mainMessage.id, "LOG": this.logMessage.id}));
     }
+
+    /**
+     * @deprecated
+     * Use MessageWorker#setLocalizatedMessage
+     * @param content
+     */
     sendMainMessage(content = "Nothing") {
         this.buildMainMessage(content).then(_ => {
             this.mainMessage.edit(_)
@@ -84,7 +105,14 @@ class MessageWorker {
                 Logger.warn("Unable to update main message: " + e);
             });
         })
-
+    }
+    setLocalizatedMessage(content = "error.noKey") {
+        this.buildMainMessage(this.i18n.__(content)).then(message => {
+            this.mainMessage.edit(message)
+                .catch(e => {
+                    Logger.warn("Unable to update main message: " + e);
+                });
+        })
     }
     /**
      *
@@ -100,8 +128,9 @@ class MessageWorker {
     async buildMainMessage(content = "Nothing") {
         return new Promise(async (resolve) => {
             let initiator = this.serverManager.initiator;
-            let row = new MessageActionRow();
+            let row = new ActionRowBuilder();
             //let secondayRow = new MessageActionRow();
+
             let addComponent = true;
             switch (this.serverManager.state) {
                 case "WAITING":
@@ -121,7 +150,7 @@ class MessageWorker {
                     addComponent = false;
                     break;
                 case "RP_SELECTION":
-                    let noRpButton = new MessageButton()
+                    let noRpButton = new ButtonBuilder()
                         .setCustomId("no_rp")
                         .setEmoji("❌")
                         .setStyle("PRIMARY")
@@ -130,27 +159,36 @@ class MessageWorker {
                     break;
                 case "STARTING":
                 case "HOSTING":
-                    let stopServerButton = new MessageButton()
+                    let restartButton = new ButtonBuilder()
+                        .setCustomId("restart")
+                        .setEmoji("🔁")
+                        .setStyle('Secondary')
+                        .setLabel("Restart")
+                    let stopServerButton = new ButtonBuilder()
                         .setCustomId("stop_server")
                         .setEmoji("🛑")
-                        .setStyle("DANGER")
+                        .setStyle("Danger")
                         .setLabel("Stop server");
-                    row.addComponents(stopServerButton)
+                    row.addComponents(stopServerButton);
+                    row.addComponents(restartButton);
                     break;
             }
             let messageConfig = this.serverManager.config.message;
-            let embed = new MessageEmbed()
+            let embed = new EmbedBuilder()
                 .setTitle(messageConfig.title)
                 .setDescription(messageConfig.description)
                 .setColor(messageConfig.sideColor)
                 .setFooter({
                     "text": messageConfig.footer
                 })
-                .addField("Status", MessageWorker.resolveStatus(this.serverManager.state), true)
-                .addField("Initiator", initiator ? `<@!${initiator.id}>` : "N/A", true)
-                .addField("IP", "`" + messageConfig.ip + "`", true)
-                .addField("Version", `\`${(this?.serverManager?.vManager?.selectedVersion?.id ?? "N/A")}\``, true)
-                .addField("Message", content, false)
+                .addFields(
+                    {name: "Status", value: MessageWorker.resolveStatus(this.serverManager.state), inline: true},
+                    {name: "Initiator", value: initiator ? `<@!${initiator.id}>` : "N/A", inline: true},
+                    {name: "IP", value: messageConfig.ip, inline: true},
+                    {name: "Version", value: `\`${(this?.serverManager?.vManager?.selectedVersion?.id ?? "N/A")}\``, inline: true},
+                    {name: "Message", value: content, inline: false},
+
+                )
 
             if (addComponent) {
                 resolve({content: " ", embeds: [embed], components: [row]});

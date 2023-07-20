@@ -15,9 +15,10 @@ const FabricCore = require("./cores/FabricCore");
 const SharedConstants = require('./SharedConstants');
 const config = require("./config/ConfigProperties");
 const fs = require("fs");
-const {SelectMenuInteraction, ButtonInteraction} = require("discord.js");
+const {SelectMenuInteraction, ButtonInteraction, StringSelectMenuInteraction, PermissionsBitField} = require("discord.js");
 const { parse } = require('prismarine-nbt')
 const Logger = require('./Logger');
+const { I18n } = require("i18n");
 
 class ServerManager {
     resourcePackLink = null;
@@ -73,12 +74,12 @@ class ServerManager {
      */
     config = config.handle();
     /**
-     *
-     * @param {Discord.Client} client
+     * @type {I18n}
      */
-
     constructor(client) {
+        if (!client.isReady()) return;
         this.messageWorker = new MessageWorker(client, this.mapManager, this);
+        console.log(this.messageWorker.i18n.__("test.key"));
         this.createFolder(SharedConstants.jarsFolder);
         this.createFolder(SharedConstants.serverFolder);
         this.createFolder(SharedConstants.mapsFolder);
@@ -133,7 +134,7 @@ class ServerManager {
     async downloadJarIfNotExist() {
         await this.core.install()
             .catch(err => {
-                this.messageWorker.sendMainMessage("Unable to download server with provided version.");
+                this.messageWorker.sendMainMessage(this.i18n.__("error.unableDownloadVersion")); //fixme
                 Logger.warn("Unable to download server with provided version. Err: " + err);
             });
     }
@@ -370,7 +371,7 @@ class ServerManager {
     async onInteraction(interaction) {
         switch (this.state) {
             case "WAITING":
-                if (!(interaction instanceof SelectMenuInteraction)) return;
+                if (!(interaction instanceof StringSelectMenuInteraction)) return;
                 Logger.log(`${interaction.user.username} (${interaction.user.id}) starting predefined map!`)
                 let alias = interaction.values[0];
                 this.state = ServerManager.States.DOWNLOADING_WORLD;
@@ -429,11 +430,11 @@ class ServerManager {
             case "STARTING":
             case "HOSTING":
                 if (!(interaction instanceof ButtonInteraction)) return;
-                if (interaction.channel.permissionsFor(interaction.member).has("MANAGE_CHANNELS")) {
+                if (interaction.channel.permissionsFor(interaction.member).has(PermissionsBitField.Flags.ManageChannels)) {
                     Logger.log(`${interaction.user.username} (${interaction.user.id}) force stopped server!`);
                 }
                 if (interaction.member.user !== this.initiator &&                                   //check that initiator made action
-                    !interaction.channel.permissionsFor(interaction.member).has("MANAGE_CHANNELS")  //check that user have manage channel perms
+                    !interaction.channel.permissionsFor(interaction.member).has(PermissionsBitField.Flags.ManageChannels)  //check that user have manage channel perms
                 ) return;
                 if (interaction.customId === "stop_server") {
                     try {
