@@ -99,11 +99,12 @@ class ConfigProperties {
             file = fs.readFileSync(SharedConstants.ConfigFile, "utf8");
         } catch (e) {
             Logger.warn("Config file not found creating a new one");
+            file = "{}";
         }
         try {
             jsonConfig = JSON.parse(file);
         } catch (e) {
-            Logger.fatal("Config file have syntax error. " + e);
+            Logger.warn("Config file have syntax error. " + e);
             return;
         }
 

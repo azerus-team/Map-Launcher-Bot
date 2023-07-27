@@ -2,10 +2,12 @@ const VersionManager = require("./VersionManager.js");
 const Discord = require("discord.js");
 const miniget = require("miniget");
 const path = require("path");
-const MapManager = require("./MapManager");
 const { zip } = require("zip-a-folder");
 const { spawn } = require("child_process");
 const unzipper = require("unzipper");
+const YAML = require("yaml");
+
+const MapManager = require("./MapManager");
 const MessageWorker = require("./MessageWorker");
 
 const VanillaCore = require("./cores/VanillaCore");
@@ -19,6 +21,7 @@ const {SelectMenuInteraction, ButtonInteraction, StringSelectMenuInteraction, Pe
 const { parse } = require('prismarine-nbt')
 const Logger = require('./Logger');
 const { I18n } = require("i18n");
+
 
 class ServerManager {
     resourcePackLink = null;
@@ -96,9 +99,11 @@ class ServerManager {
                 break;
         }
     }
+
     createFolder(path) {
         if (!fs.existsSync(path)) fs.mkdirSync(path);
     }
+
     stopServer() {
         this.state = ServerManager.States.WAITING;
         this.players = [];
@@ -142,16 +147,21 @@ class ServerManager {
         this.resourcePackLink = link;
     }
     createServerProperties() {
-        let defaultServerProperties = this.config.serverConfig.serverProperties || {}
-        let mapServerProperties = {}
+        let defaultServerProperties = this.config.serverConfig.serverProperties || {};
+        let mapServerProperties = {};
+        let paperJson = {};
         if (!this.isCustomMap) {
             mapServerProperties = this.mapManager.selectedMap["serverConfig"]?.["server.properties"] ?? {};
+            paperJson = this.mapManager.selectedMap["serverConfig"]?.["paper.yml"] ?? {};
         }
         let serverProps = this.combineProps(defaultServerProperties, mapServerProperties);
         let props = "";
         for (let key in serverProps) {
             props += key + "=" + serverProps[key] + "\n";
         }
+        let paperYml = new YAML.Document();
+        paperYml.contents = paperJson;
+        fs.writeFileSync(SharedConstants.serverFolder + "/paper.yml", paperYml.toString(), "utf8");
         fs.writeFileSync(SharedConstants.serverFolder + "/server.properties", props , "utf8");
         fs.writeFileSync(SharedConstants.serverFolder + "/eula.txt", "eula=" + this.config.eula);
     }

@@ -16,6 +16,10 @@ class MapManager {
     selectedMap;
     constructor() {
         let maps = [];
+        if (!fs.existsSync(SharedConstants.MapsFile)) {
+            fs.copyFileSync(SharedConstants.MapsDefaultFile, SharedConstants.MapsFile);
+            Logger.log("Created maps.json from default!");
+        }
         try {
             let mapsFile = fs.readFileSync(SharedConstants.MapsFile);
             maps = JSON.parse(mapsFile.toString());

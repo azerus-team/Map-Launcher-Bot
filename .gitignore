@@ -5,8 +5,8 @@ node_modules
 server
 jars
 messages.json
-maps
-maps_.json
 maps.json
+maps_.json
+#maps.json
 config.json
 package-lock.json

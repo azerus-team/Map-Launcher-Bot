@@ -31,7 +31,7 @@ class ServerConfig {
         let spawnProtection = parseInt(ServerConfig.setDefaultAndGet(serverProperties, "spawn-protection", 0));
         if (isNaN(spawnProtection) || spawnProtection < 0) {
             spawnProtection = 0;
-            Logger.warn("config.json configured wrongly config.json -> serverConfig -> spawn-protection should be non positive int. Set default value 'true'");
+            Logger.warn("config.json configured wrongly config.json -> serverConfig -> spawn-protection should be non positive int. Set default value 0");
         }
         serverProperties["max-players"] = maxPlayers; //TODO: find more elegant way to set default value
         serverProperties["online-mode"] = onlineMode;
