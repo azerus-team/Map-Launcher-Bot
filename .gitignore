@@ -7,6 +7,6 @@ jars
 messages.json
 maps.json
 maps_.json
-#maps.json
+maps__.json
 config.json
 package-lock.json
