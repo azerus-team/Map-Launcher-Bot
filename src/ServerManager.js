@@ -284,6 +284,7 @@ class ServerManager {
             case "WAITING":
                 let url;
                 this.state = ServerManager.States.DOWNLOADING_WORLD;
+
                 if (message.attachments == null || message.attachments.size !== 1) {
                     let writeUrl = message.content;
                     await message.delete();
@@ -404,7 +405,7 @@ class ServerManager {
                 await this.selectVersion(mapFromEmoji.version)
                 break;
             case "V_SELECTION":
-                if (!(interaction instanceof SelectMenuInteraction)) return;
+                if (!(interaction instanceof StringSelectMenuInteraction)) return;
                 if (interaction.member.user !== this.initiator) return;
                 interaction.update({fetchReply: true}).then(async _ => {
                     await this.selectVersion(interaction.values[0])

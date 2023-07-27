@@ -153,7 +153,7 @@ class MessageWorker {
                     let noRpButton = new ButtonBuilder()
                         .setCustomId("no_rp")
                         .setEmoji("❌")
-                        .setStyle("PRIMARY")
+                        .setStyle("Primary")
                         .setLabel("No resourcepack");
                     row.addComponents(noRpButton)
                     break;

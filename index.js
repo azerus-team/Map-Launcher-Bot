@@ -4,6 +4,7 @@ const { GatewayIntentBits, Events, PermissionsBitField} = require('discord.js');
 const client = new Discord.Client({intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildIntegrations,
+        GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMessages]});
 const ServerManager = require("./src/ServerManager");
 const {MessageComponentInteraction, TextChannel} = require("discord.js");
@@ -37,6 +38,7 @@ client.on(Events.MessageCreate, (message) => {
         Logger.warn("Something went wrong while handling Message Receive. " + e);
     });
 });
+
 client.on(Events.InteractionCreate, interation => {
     if (!(interation instanceof MessageComponentInteraction)) return;
     if (!(interation.channel instanceof TextChannel)) return;
@@ -47,9 +49,11 @@ client.on(Events.InteractionCreate, interation => {
         sManager.onInteraction(interation);
     }
 });
+
 if (sManager.config.botToken === "<Bot token is here or use process.env>") {
     Logger.fatal("Set bot token in config.json and restart app!");
 }
+
 console.log(sManager.config.botToken.slice(0, 10));
 client.login(sManager.config.botToken).catch(e => {
     Logger.fatal("Bot token in invalid. Set token in config.json and restart app!" + e);

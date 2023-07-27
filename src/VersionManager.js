@@ -1,5 +1,5 @@
 const https = require("https");
-const {MessageSelectMenu} = require("discord.js");
+const {MessageSelectMenu, SelectMenuBuilder} = require("discord.js");
 const ServerManager = require("./ServerManager");
 const miniget = require('miniget');
 const fs = require('fs');
@@ -156,11 +156,11 @@ class VersionManager {
      */
     async getMessageComponent() {
         const versions = await this.serverManager.core.getReleases();
-        let versionSelection = new MessageSelectMenu()
+        let versionSelection = new SelectMenuBuilder()
             .setMinValues(1)
             .setMaxValues(1)
             .setPlaceholder("Select version")
-            .setCustomId("v_select")
+            .setCustomId("v_select");
         for (let i = 0; i < versions.length; i++) {
             versionSelection.addOptions({
                 "label": versions[i],
