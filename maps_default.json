@@ -92,7 +92,7 @@
     "alias": "fd",
     "emojiId": "921377124403793940",
     "url": "https://azerusteam.com/download/fresh-designs.zip",
-    "version": "1.18.2",
+    "version": "latest",
     "resourcePack": "https://azerusteam.com/resources/fresh-designs_resources.zip",
     "serverConfig": {
       "server.properties": {
