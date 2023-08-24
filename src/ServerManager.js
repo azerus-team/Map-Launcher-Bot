@@ -150,9 +150,13 @@ class ServerManager {
         let defaultServerProperties = this.config.serverConfig.serverProperties || {};
         let mapServerProperties = {};
         let paperJson = {};
+        let spigotJson = {};
+        let bukkitJson = {};
         if (!this.isCustomMap) {
             mapServerProperties = this.mapManager.selectedMap["serverConfig"]?.["server.properties"] ?? {};
             paperJson = this.mapManager.selectedMap["serverConfig"]?.["paper.yml"] ?? {};
+            spigotJson = this.mapManager.selectedMap["serverConfig"]?.["spigot.yml"] ?? {};
+            bukkitJson = this.mapManager.selectedMap["serverConfig"]?.["bukkit.yml"] ?? {};
         }
         let serverProps = this.combineProps(defaultServerProperties, mapServerProperties);
         let props = "";
@@ -161,7 +165,13 @@ class ServerManager {
         }
         let paperYml = new YAML.Document();
         paperYml.contents = paperJson;
+        let spigotYml = new YAML.Document();
+        spigotYml.contents = spigotJson;
+        let bukkitYml = new YAML.Document();
+        bukkitYml.contents = bukkitJson;
         fs.writeFileSync(SharedConstants.serverFolder + "/paper.yml", paperYml.toString(), "utf8");
+        fs.writeFileSync(SharedConstants.serverFolder + "/spigot.yml", spigotYml.toString(), "utf8");
+        fs.writeFileSync(SharedConstants.serverFolder + "/bukkit.yml", bukkitYml.toString(), "utf8");
         fs.writeFileSync(SharedConstants.serverFolder + "/server.properties", props , "utf8");
         fs.writeFileSync(SharedConstants.serverFolder + "/eula.txt", "eula=" + this.config.eula);
     }

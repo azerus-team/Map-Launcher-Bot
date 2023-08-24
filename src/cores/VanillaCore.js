@@ -54,13 +54,15 @@ class VanillaCore extends Core {
      */
     async createServerProcess() {
         let hasLog4JFixFile = await this.serverManager.vManager.hasLog4JFixFile();
-        let args = ['-jar',
+        let args = [
+            '-jar',
             '-Xmx' + this.serverManager.config.maxMemory,
             '-Xms' + this.serverManager.config.initialMemory,
-            '-Dlog4j.formatMsgNoLookups=true',
-            `../jars/Minecraft-${this.serverManager.vManager.selectedVersion["id"]}.jar`,
-            'nogui'];
+            '-Dlog4j.formatMsgNoLookups=true'
+        ];
         if (hasLog4JFixFile) args.push("-Dlog4j.configurationFile=log4j_conf.xml");
+        args.push(`../jars/Minecraft-${this.serverManager.vManager.selectedVersion["id"]}.jar`);
+        args.push('nogui');
         Logger.log("Running with args: " + args.join(", "));
         return spawn(this.serverManager.config.javaPath, args, {cwd: SharedConstants.serverFolder});
     }
