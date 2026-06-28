@@ -138,12 +138,13 @@ class VersionManager {
             return false;
         } else if (versionType === "release") {
             let versionSplit = version.split(".");
-            let minor = versionSplit[1];
+            let major = parseInt(versionSplit[0]);
+            let minor = parseInt(versionSplit[1]);
             let file;
-            if (parseInt(minor) >= 7 && parseInt(minor) <= 11) {
+            if (major === 1 && minor >= 7 && minor <= 11) {
                 file = await miniget("https://launcher.mojang.com/v1/objects/4bb89a97a66f350bc9f73b3ca8509632682aea2e/log4j2_17-111.xml").text();
             }
-            if (parseInt(minor) >= 12 && parseInt(minor) <= 16) {
+            if (major === 1 && minor >= 12 && minor <= 16) {
                 file = await miniget("https://launcher.mojang.com/v1/objects/02937d122c86ce73319ef9975b58896fc1b491d1/log4j2_112-116.xml").text();
             }
             if (file) fs.writeFileSync(SharedConstants.serverFolder + "/log4j_conf.xml", file);

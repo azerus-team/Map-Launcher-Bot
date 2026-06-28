@@ -17,7 +17,7 @@ const FabricCore = require("./cores/FabricCore");
 const SharedConstants = require('./SharedConstants');
 const config = require("./config/ConfigProperties");
 const fs = require("fs");
-const {SelectMenuInteraction, ButtonInteraction, StringSelectMenuInteraction, PermissionsBitField} = require("discord.js");
+const {ButtonInteraction, StringSelectMenuInteraction, PermissionsBitField} = require("discord.js");
 const { parse } = require('prismarine-nbt')
 const Logger = require('./Logger');
 const { I18n } = require("i18n");
@@ -335,6 +335,8 @@ class ServerManager {
                         return;
                     }
 
+                    Logger.debug("Try read version from level.dat")
+
                     let data;
                     let version = null;
                     try {
@@ -343,14 +345,19 @@ class ServerManager {
                         version = parsed?.value?.["Data"]?.value["Version"]?.value["Name"]?.value;
                     } catch (e) {
                     }
+
+                    Logger.debug("Version from level.dat: " + version)
+
                     this.isCustomMap = true;
                     this.initiator = message.author;
                     if (version === (await this.getVersionManager().getLatestRelease()) ||
                         version === this.getVersionManager().getLatestSnapshot()) {
+                        Logger.debug(`Latest version ${version} auto detected from level.dat file!`)
                         this.messageWorker.sendLogMessage(`Latest version ${version} auto detected from level.dat file!`);
                         await this.selectVersion(version);
                     } else {
                         this.state = "V_SELECTION";
+                        Logger.debug(`Map is loaded in ${version} which is not latest or unusual`)
                         this.messageWorker.sendMainMessage(`Map is loaded in ${version} which is not latest or unusual. Select version or write that you need!`);
                     }
                 } else {
