@@ -74,17 +74,18 @@ class VanillaCore extends Core {
     async getReleases() {
         let data = await miniget(VanillaCore.VANILLA_VERSION_MANIFEST).text();
         let manifest = JSON.parse(data);
+        Logger.debug(manifest)
         let mainReleases = {};
         let versions = manifest["versions"];
         for (let i = 0; i < versions.length; i++) {
             const ver = versions[i];
+            Logger.debug(JSON.stringify(ver));
             if (ver["type"] !== "release") continue;
-            let matches = ver["id"].match(/^(\d\.\d*)(\.\d*|)$/m);
-            let mainVersion = matches[1];
+            let mainVersion = ver["id"];
             if (!mainReleases.hasOwnProperty(mainVersion)) {
                 mainReleases[mainVersion] = ver["id"];
             }
-            if (Object.keys(mainReleases).length >= 11) {
+            if (Object.keys(mainReleases).length > 10) {
                 break;
             }
         }

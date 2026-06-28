@@ -82,6 +82,7 @@ class VersionManager {
     async getLatestRelease() {
         return (await this.serverManager.core.getReleases())[0];
     }
+
     getLatestSnapshot() {
         return this?.jsonVanillaManifest?.["latest"]?.["snapshot"];
     }

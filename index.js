@@ -54,7 +54,6 @@ if (sManager.config.botToken === "<Bot token is here or use process.env>") {
     Logger.fatal("Set bot token in config.json and restart app!");
 }
 
-console.log(sManager.config.botToken.slice(0, 10));
 client.login(sManager.config.botToken).catch(e => {
     Logger.fatal("Bot token in invalid. Set token in config.json and restart app!" + e);
 });

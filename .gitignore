@@ -4,6 +4,8 @@ Test.js
 node_modules
 server
 jars
+logs
+maps
 messages.json
 maps.json
 maps_.json
