@@ -210,7 +210,11 @@ class ServerManager {
                 let directGoogle = linkUtils.directGoogle(link);
                 if (directGoogle) link = directGoogle
 
-                miniget(link).pipe(writeStream);
+                miniget(link).pipe(writeStream)
+                    .on("error", async (err) => {
+                        this.messageWorker.sendLogMessage("I can't download map using this link!");
+                        Logger.warn("Unable to download world: " + err);
+                    });
                 writeStream.on("close", resolve);
 
                 writeStream.on("error", async (err) => {
