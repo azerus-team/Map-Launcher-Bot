@@ -4,19 +4,20 @@ const miniget = require("miniget");
 const path = require("path");
 const { zip } = require("zip-a-folder");
 const { spawn } = require("child_process");
+const fs = require("fs");
 const unzipper = require("unzipper");
+
 const YAML = require("yaml");
-
 const MapManager = require("./MapManager");
-const MessageWorker = require("./MessageWorker");
 
+const MessageWorker = require("./MessageWorker");
 const VanillaCore = require("./cores/VanillaCore");
 const PaperCore = require("./cores/PaperCore");
-const FabricCore = require("./cores/FabricCore");
 
+const FabricCore = require("./cores/FabricCore");
 const SharedConstants = require('./SharedConstants');
 const config = require("./config/ConfigProperties");
-const fs = require("fs");
+const linkUtils = require("./LinkUtils");
 const {ButtonInteraction, StringSelectMenuInteraction, PermissionsBitField} = require("discord.js");
 const { parse } = require('prismarine-nbt')
 const Logger = require('./Logger');
@@ -205,10 +206,13 @@ class ServerManager {
         return new Promise(async (resolve, reject) => {
             if (link.protocol === "https:" || link.protocol === "http:") {
                 let writeStream = fs.createWriteStream(SharedConstants.serverFolder + "/tempWorld.zip");
+
+                let directGoogle = linkUtils.directGoogle(link);
+                if (directGoogle) link = directGoogle
+
                 miniget(link).pipe(writeStream);
-                writeStream.on("close", () => {
-                    resolve();
-                });
+                writeStream.on("close", resolve);
+
                 writeStream.on("error", async (err) => {
                     this.messageWorker.sendLogMessage("I can't download map using this link!")
                     Logger.warn("Unable to download world: " + err);
