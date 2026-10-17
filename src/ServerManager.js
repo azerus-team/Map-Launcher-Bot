@@ -287,6 +287,11 @@ class ServerManager {
             this.messageWorker.sendMainMessage("Select one of version below OR write special version");
         }
         let isDownloaded = await this.downloadJarIfNotExist();
+        if (this.resourcePackLink === "") {
+            this.setResourcePack(null);
+            await this.startServer();
+            return
+        }
         this.state = "RP_SELECTION";
         if (isDownloaded) {
             this.messageWorker.sendLogMessage("Server is downloaded!")
@@ -308,13 +313,14 @@ class ServerManager {
             await message.delete();
             return;
         }
+        var content = message.content;
         switch (this.state) {
             case "WAITING":
                 let url;
                 this.state = ServerManager.States.DOWNLOADING_WORLD;
 
                 if (message.attachments == null || message.attachments.size !== 1) {
-                    let writeUrl = message.content;
+                    let writeUrl = content;
                     await message.delete();
                     try {
                         url = new URL(writeUrl);
@@ -358,6 +364,9 @@ class ServerManager {
 
                     this.isCustomMap = true;
                     this.initiator = message.author;
+                    if (content === "-rp") {
+                        this.setResourcePack("");
+                    }
                     if (version === (await this.getVersionManager().getLatestRelease()) ||
                         version === this.getVersionManager().getLatestSnapshot()) {
                         Logger.debug(`Latest version ${version} auto detected from level.dat file!`)
@@ -377,7 +386,7 @@ class ServerManager {
                 }
                 break;
             case "V_SELECTION":
-                let version = message.content;
+                let version = content;
                 message.delete().catch(e => {
                     Logger.warn("Unable to delete message: " + e);
                 });
@@ -387,7 +396,7 @@ class ServerManager {
                 if (message.attachments == null || message.attachments.size !== 1) {
                     this.messageWorker.sendLogMessage("You need send message with Attachment in ZIP format");
                     this.resourcePackMessage = message;
-                    this.setResourcePack(message.content);
+                    this.setResourcePack(content);
                     await this.startServer()
                     return;
                 }
@@ -423,13 +432,13 @@ class ServerManager {
                 }
                 this.initiator = interaction.member.user;
                 this.isCustomMap = false;
-                await this.downloadWorldZip(new URL(mapFromEmoji.url));
                 try {
+                    await this.downloadWorldZip(new URL(mapFromEmoji.url));
                     await this.unpackWorld();
                 } catch (e) {
                     this.stopServer()
                     Logger.warn("Unable to unpack world: " + e);
-                    this.messageWorker.sendLogMessage("Something went wrong while unpacking the world! Check console for more information");
+                    this.messageWorker.sendLogMessage("Something went wrong while processing the world! Check console for more information");
                     return;
                 }
                 if (mapFromEmoji.resourcePack) {
