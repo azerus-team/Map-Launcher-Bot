@@ -7,9 +7,9 @@ const Logger = require("../Logger");
 const SharedConstants = require("../SharedConstants");
 
 class PaperCore extends Core {
-    static PAPER_MANIFEST = "https://papermc.io/api/v2/projects/paper"
-    static BUILDS_MANIFEST = (MINECRAFT_VERSION) => `https://papermc.io/api/v2/projects/paper/versions/${MINECRAFT_VERSION}`
-    static DOWNLOAD_LINK = (MINECRAFT_VERSION, BUILD_NUMBER) => `https://papermc.io/api/v2/projects/paper/versions/${MINECRAFT_VERSION}/builds/${BUILD_NUMBER}/downloads/paper-${MINECRAFT_VERSION}-${BUILD_NUMBER}.jar`
+    static PAPER_MANIFEST = "https://fill.papermc.io/v3/projects/paper"
+    static BUILDS_MANIFEST = (MINECRAFT_VERSION) => `https://fill.papermc.io/v3/projects/paper/versions/${MINECRAFT_VERSION}/builds`
+    static DOWNLOAD_LINK = (MINECRAFT_VERSION, BUILD_NUMBER) => `https://fill.papermc.io/v3/projects/paper/versions/${MINECRAFT_VERSION}/builds/${BUILD_NUMBER}/downloads/paper-${MINECRAFT_VERSION}-${BUILD_NUMBER}.jar`
 
     build;
 
@@ -52,16 +52,14 @@ class PaperCore extends Core {
     async getDownloadLink() {
         let selectedVersion = this.serverManager.vManager.selectedVersion["id"];
         let buildManifest = await (miniget(PaperCore.BUILDS_MANIFEST(selectedVersion)).text());
+
         let buildManifestJson = JSON.parse(buildManifest);
-        if (buildManifestJson["error"]) {
-            Logger.warn("Something went wrong while earning download link! Err: " + buildManifestJson["error"])
-            return;
-        }
-        let builds = buildManifestJson["builds"];
-        let latestBuildNumber = builds[builds.length - 1];
+        let build = buildManifestJson[0];
+        let latestBuildNumber = build['id'];
+
         if (!selectedVersion || !latestBuildNumber) return null;
         this.build = latestBuildNumber;
-        return PaperCore.DOWNLOAD_LINK(selectedVersion, latestBuildNumber);
+        return build['downloads']['server:default']['url']
     }
 
     /**
@@ -79,23 +77,25 @@ class PaperCore extends Core {
         return spawn(this.serverManager.config.javaPath, args, {cwd: SharedConstants.serverFolder + '/'});
     }
     async getReleases() {
-        //https://papermc.io/api/v2/projects/paper
-        let data = await miniget(PaperCore.PAPER_MANIFEST).text();
-        let manifest = JSON.parse(data);
-        let mainReleases = {};
-        let versions = manifest["versions"].reverse();
-        for (let i = 0; i < versions.length; i++) {
-            const ver = versions[i];
-            let matches = ver.match(/^(\d\.\d*)(\.\d*|)$/m);
-            if (!matches) continue;
-            let mainVersion = matches[1];
-            if (!mainReleases.hasOwnProperty(mainVersion)) {
-                mainReleases[mainVersion] = ver;
-            }
+        const data = await miniget(PaperCore.PAPER_MANIFEST).text();
+        const manifest = JSON.parse(data);
+
+        const mainReleases = {};
+
+        for (const [mainVersion, releases] of Object.entries(manifest.versions)) {
+            if (!releases.length) continue;
+
+            // Skip pre-releases and release candidates
+            const latest = releases.find(ver => /^\d+\.\d+(?:\.\d+)?$/.test(ver));
+            if (!latest) continue;
+
+            mainReleases[mainVersion] = latest;
+
             if (Object.keys(mainReleases).length >= 11) {
                 break;
             }
         }
+
         return Object.values(mainReleases);
     }
 }

@@ -35,7 +35,8 @@ client.on(Events.MessageCreate, (message) => {
     if (message.channel.id !== channel) return;
     if (message.author.bot) return;
     sManager.onMessageReceive(message).catch(e => {
-        Logger.warn("Something went wrong while handling Message Receive. " + e);
+        Logger.warn("Something went wrong while handling Message Receive. ");
+        console.error(e);
     });
 });
 
